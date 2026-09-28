@@ -81,6 +81,13 @@
   networking.hostName = "amd-workstation";
   networking.networkmanager.enable = true;
 
+  # Leave the NIC in magic-packet wake mode on shutdown so the machine can be
+  # powered on remotely via Wake-on-LAN.
+  networking.interfaces.enp8s0.wakeOnLan = {
+    enable = true;
+    policy = ["magic"];
+  };
+
   i18n.defaultLocale = "en_US.UTF-8";
   time.timeZone = "America/Chicago";
 
