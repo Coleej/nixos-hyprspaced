@@ -11,6 +11,7 @@
     {
       thinkpad = self + /hosts/thinkpad/monitors.lua;
       amd-workstation = self + /hosts/amd-workstation/monitors.lua;
+      x1 = self + /hosts/x1/monitors.lua;
     }
     .${
       hostName
@@ -26,6 +27,7 @@
     {
       thinkpad = self + /configs/waybar/config.json;
       amd-workstation = self + /configs/waybar/config-amd-workstation.json;
+      x1 = self + /configs/waybar/config.json;
     }
     .${
       hostName

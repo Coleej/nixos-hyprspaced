@@ -72,6 +72,15 @@
           extraGroups = [];
         };
       };
+      x1 = {
+        user = {
+          name = "cody";
+          group = "users";
+          home = "/home/cody";
+          description = "Cody";
+          extraGroups = [];
+        };
+      };
       wsl = {
         wsl = true;
         homeModule = ./home-wsl.nix;
