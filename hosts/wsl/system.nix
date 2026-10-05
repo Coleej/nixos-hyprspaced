@@ -16,13 +16,13 @@
 
   wsl.enable = true;
   wsl.defaultUser = "cody";
-  # Default is false ("use the existing registration") because NixOS-WSL
-  # assumes Windows' own boot sequence already registers the WSLInterop
-  # binfmt_misc handler before systemd takes over as PID 1. On this host that
-  # inherited registration never happens (/proc/sys/fs/binfmt_misc has no
-  # WSLInterop entry), so .exe files (e.g. surge_stat.exe) can't run from WSL
-  # without this.
-  wsl.interop.register = true;
+  # Previously true: older WSL never registered the WSLInterop binfmt_misc
+  # handler on this host, so .exe files (e.g. surge_stat.exe) couldn't run.
+  # WSL 3.0 locks /proc/sys/fs/binfmt_misc/status read-only, which makes
+  # systemd-binfmt exit 1 on every boot/switch (its flush hits EROFS). Testing
+  # whether WSL 3.0 now registers WSLInterop itself; if .exe files stop
+  # working after `wsl.exe --shutdown`, set this back to true.
+  wsl.interop.register = false;
 
   networking.hostName = "wsl";
 
