@@ -27,7 +27,7 @@
   home.activation.writeTaskchampionSecret = lib.hm.dag.entryAfter ["linkGeneration"] ''
     secret_path="${config.sops.secrets.taskchampion_secret.path}"
     taskrc="${config.xdg.configHome}/task/taskrc"
-    if [ -f "$secret_path" ] && [ -d "${config.xdg.configHome}/task" ]; then
+    if [ -f "$secret_path" ]; then
       secret=$(cat "$secret_path")
       mkdir -p "${config.xdg.configHome}/task"
       if [ -f "$taskrc" ]; then
