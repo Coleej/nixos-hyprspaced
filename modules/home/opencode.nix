@@ -1,6 +1,11 @@
-{config, ...}: {
+{
+  config,
+  pkgs,
+  opencodeV2,
+  ...
+}: {
   # opencode AI coding agent — shared by all hosts (desktop + WSL).
-  # programs.opencode.enable installs pkgs.opencode via home.packages, so the
+  # programs.opencode.enable installs the package via home.packages, so the
   # package is intentionally NOT listed in modules/shared/packages.nix or
   # modules/home/packages-wsl.nix.
   #
@@ -8,6 +13,23 @@
   # tui       → ~/.config/opencode/tui.json       (theme/keybinds live here on v1.2.15+)
   # Secrets: use opencode's "{file:<sops path>}" substitution in settings values
   # so keys stay out of the Nix store.
+  #
+  # `opencodeV2` is the github:Coleej/opencode-v2 flake, threaded in through
+  # home-manager.users.<name>._module.args in flake.nix. Its HM module is
+  # imported from that same `imports` list, because a module's own `imports` is
+  # resolved before _module.args exist. The imported module sets ONLY
+  # programs.opencode.package (via mkDefault) and deliberately defines no
+  # settings/tui options, so it composes with the block below instead of
+  # colliding with it.
+  #
+  # Migrating off nixpkgs' 1.x: v2 auto-migrates the SQLite data on first launch,
+  # and that migration is one-way. Run scripts/opencode-v2-migrate.py by hand
+  # before rebuilding on a machine that still has v1 data.
+  opencode-v2 = {
+    enable = true;
+    package = opencodeV2.packages.${pkgs.stdenv.hostPlatform.system}.opencode;
+  };
+
   programs.opencode = {
     enable = true;
     settings = {
