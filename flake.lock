@@ -701,16 +701,16 @@
         "nixpkgs": "nixpkgs_3"
       },
       "locked": {
-        "lastModified": 1791285702,
-        "narHash": "sha256-Pah0N+kS4Chr5rw3JROnp12cVK08IvgTDAh8xFYY+Wc=",
+        "lastModified": 1791383520,
+        "narHash": "sha256-JBAshfJx5Mq4igVs7eGOAmEwr8wnFEtnRyIfdvXDq2w=",
         "ref": "refs/heads/main",
-        "rev": "243a792383f829af861981023795da6b7c9649a0",
-        "revCount": 10,
+        "rev": "f146830ed52a4e79c9c8596a14097e3d09631823",
+        "revCount": 11,
         "type": "git",
         "url": "ssh://git@github.com/Coleej/opencode-v2.git"
       },
       "original": {
-        "rev": "243a792383f829af861981023795da6b7c9649a0",
+        "rev": "f146830ed52a4e79c9c8596a14097e3d09631823",
         "type": "git",
         "url": "ssh://git@github.com/Coleej/opencode-v2.git"
       }

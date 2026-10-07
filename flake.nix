@@ -47,7 +47,7 @@
     # update workflow, which is the intended point to move this forward and
     # re-run scripts/opencode-v2-migrate.py.
     opencode-v2 = {
-      url = "git+ssh://git@github.com/Coleej/opencode-v2.git?rev=243a792383f829af861981023795da6b7c9649a0";
+      url = "git+ssh://git@github.com/Coleej/opencode-v2.git?rev=f146830ed52a4e79c9c8596a14097e3d09631823";
     };
   };
 
