@@ -15,6 +15,11 @@
 
   programs.home-manager.enable = true;
 
+  # github.com maps to the work key in ~/.ssh/config here, but private flake
+  # inputs (opencode-v2) need the personal key. --sudo keeps the fetch as cody
+  # so GIT_SSH_COMMAND and ~/.ssh apply.
+  programs.fish.shellAbbrs.rebuild = "env GIT_SSH_COMMAND=\"ssh -i $HOME/.ssh/id_ed25519 -o IdentitiesOnly=yes\" nixos-rebuild switch --sudo --flake ~/Projects/Nix/nixos-config#wsl";
+
   home.sessionVariables = {
     EDITOR = "nvim";
     VISUAL = "nvim";
