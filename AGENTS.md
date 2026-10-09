@@ -48,14 +48,14 @@ hyprspace/
 │       ├── shell.nix           # Fish + Starship prompt + fzf + direnv (shared by desktop + WSL)
 │       ├── desktop.nix         # GTK theme, alacritty, wofi (gated by shell), hypr-binds, writes shell.lua, installs configs/* via home.file
 │       ├── dankshell.nix       # programs.dank-material-shell (gated by osConfig hyprspace.dankshell.enable)
-│       ├── services.nix        # taskwarrior (taskchampion sync), netrc activation script
+│       ├── services.nix        # netrc activation script, gnome-keyring + nextcloud user services
 │       ├── secrets.nix         # sops age key + secret declarations (desktop)
 │       ├── git.nix, email.nix  # git config (shared), Proton Mail Bridge
 │       ├── opencode.nix        # programs.opencode (shared) — package + opencode.json/tui.json on all hosts; hermes provider apiKey via sops {file:...}
 │       ├── wsl.nix             # Headless WSL HM entrypoint — imports packages-wsl/shell/git/secrets-wsl/taskwarrior/opencode
 │       ├── packages-wsl.nix    # Curated headless CLI/dev packages (no GUI)
 │       ├── secrets-wsl.nix     # sops wiring for WSL — taskchampion_secret, anthropic_api_key_wsl, hermes_api_server_key
-│       └── taskwarrior.nix     # Taskwarrior 3 + taskchampion sync (secret injected at activation)
+│       └── taskwarrior.nix     # Taskwarrior 3 + taskchampion sync (shared by desktop + WSL; secret injected at activation, palette via configs/taskwarrior/adaptive.theme)
 │       # wsl skips qmd-mcp.nix (no GPU passthrough) — its Claude Code qmd MCP server
 │       # runs natively on the Windows host instead, via Task Scheduler (outside Nix).
 │       # Those Windows tasks launch via a wscript.exe .vbs wrapper (WshShell.Run with
@@ -73,6 +73,8 @@ hyprspace/
 │   ├── hyprlock-default.conf   # Template, __WALLPAPER__ substituted at activation (waybar stack)
 │   ├── hypridle-default.conf   # waybar stack
 │   ├── wofi-style.css
+│   ├── taskwarrior/
+│   │   └── adaptive.theme      # Background-free colour theme (readable on light + dark terminals), included by modules/home/taskwarrior.nix
 │   └── waybar/
 │       ├── config.json         # thinkpad (has battery)
 │       ├── config-amd-workstation.json  # (no battery module — see hosts/*/system.nix comment)

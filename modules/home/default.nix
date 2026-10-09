@@ -5,6 +5,7 @@
     ./desktop.nix
     ./dankshell.nix
     ./services.nix
+    ./taskwarrior.nix
     ./secrets.nix
     ./git.nix
     ./email.nix

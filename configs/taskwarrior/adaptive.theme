@@ -1,0 +1,141 @@
+###############################################################################
+# Taskwarrior colour theme: readable on both light and dark terminal backgrounds.
+#
+# Why this file exists
+# --------------------
+# Taskwarrior 3's built-in palette assumes a *dark* terminal. Several settings
+# paint an explicit background, which renders as a solid dark band (or white
+# text on near-black) the moment the terminal background is light:
+#
+#   color.alternate          = on gray2           <- the striped row banding
+#   color.active             = rgb555 on rgb410   <- white on dark blue
+#   color.blocked            = white on color8
+#   color.scheduled          = on rgb001
+#   color.summary.background = white on color0
+#   color.history.*          = color0 on rgb5xx   <- black on dark red/green
+#   color.burndown.*         = on rgb0xx          <- background-only
+#
+# The terminal here is themed dynamically (DMS rewrites the Alacritty theme
+# with the system light/dark theme), so the background flips underneath a
+# single static taskrc. Taskwarrior has no background detection, so the only
+# robust fix is to stop painting backgrounds at all.
+#
+# Do NOT use `bold` on a colour
+# ----------------------------
+# Alacritty's `draw_bold_text_with_bright_colors` defaults to true, so a bold
+# colour selects the palette's BRIGHT slot, not the normal one. On the light
+# Material theme DMS generates, every bright slot is washed out:
+#
+#   slot      normal          contrast   bright          contrast
+#   red       #c7003b          5.71      #fb1e60          3.66
+#   green     #008300          4.70      #00a200          3.23
+#   yellow    #737400          4.72      #918f00          3.25
+#   blue      #0070d3          4.68      #077df1          3.83
+#   magenta   #e3f2fd          1.09      #3690dc          3.23
+#   cyan      #1976d2          4.37      #8ec7ff          1.70
+#
+# Every single bold colour fails WCAG AA (4.5:1) on a light background, which
+# is why `bold blue` for due dates was "barely visible". Bold also upgrades a
+# bare `bold` (no colour) to bright white, which is #f6fbff -- effectively the
+# background colour. So this theme uses NO bold at all.
+#
+# Colour choices
+# --------------
+# Only red, green, yellow and blue are used, without bold. Those four hold up
+# on both a light and a dark background (see the table above plus Material
+# Dark: red 6.00, green 8.37, yellow 10.44, blue 5.64).
+#
+# Deliberately avoided:
+#   magenta / black / white - inverted or invisible in the light theme
+#     (normal magenta is #e3f2fd, i.e. the background itself)
+#   cyan - 1.70:1 as bold, and the lowest-contrast of the survivors
+#
+# Extra salience comes from `underline`, which is a terminal attribute and
+# therefore independent of the palette - unlike colour, it cannot be washed
+# out by a light theme. `red` (5.71) and `red underline` carry the urgent
+# states; note that low-contrast red themes such as Nord (3.05) still read
+# correctly because underline backstops the distinction.
+#
+# Valid attributes: `bold`, `underline`, `none`, and the 16/256 colour names.
+# Anything else (e.g. `dim`, which looks plausible but is NOT recognised)
+# makes Taskwarrior silently disable *all* colouring for the whole command.
+#
+# Included via `extraConfig` in modules/home/taskwarrior.nix.
+###############################################################################
+
+# Taskwarrior's own ordering: earlier entries win when several rules match a
+# task. Kept at the upstream default so status precedence is unchanged.
+rule.precedence.color=deleted,completed,active,keyword.,tag.,project.,overdue,scheduled,due.today,due,blocked,blocking,recurring,tagged,uda.
+
+# --- General decoration ---------------------------------------------------
+color.label=none
+color.label.sort=none
+# No row banding. This single line is what produced the dark stripes that
+# made `task list` unreadable on a light background.
+color.alternate=none
+color.header=none
+color.footnote=none
+color.warning=yellow
+color.error=red underline
+color.debug=none
+
+# --- Task state -----------------------------------------------------------
+color.completed=none
+color.deleted=none
+color.active=green
+color.recurring=yellow
+color.scheduled=blue
+color.until=none
+color.blocking=yellow
+color.blocked=red underline
+
+# --- Project / priority / tags ---------------------------------------------
+color.project.none=none
+color.uda.priority.H=red
+color.uda.priority.M=yellow
+color.uda.priority.L=green
+color.tag.next=blue underline
+color.tag.none=none
+color.tagged=blue
+
+# --- Due dates ------------------------------------------------------------
+# Overdue is plain red; due today adds underline so it still stands out next
+# to it without needing a second colour.
+color.due=blue
+color.due.today=red underline
+color.overdue=red
+
+# --- Report: burndown -----------------------------------------------------
+color.burndown.pending=red
+color.burndown.started=yellow
+color.burndown.done=green
+
+# --- Report: history ------------------------------------------------------
+color.history.add=green
+color.history.done=green
+color.history.delete=red
+
+# --- Report: summary ------------------------------------------------------
+color.summary.background=none
+color.summary.bar=green
+
+# --- Command: calendar ----------------------------------------------------
+# The calendar is a grid, so its cells are foreground-only here too. Today is
+# marked with underline rather than a filled cell.
+color.calendar.due=green
+color.calendar.due.today=red underline
+color.calendar.holiday=blue
+color.calendar.overdue=red
+color.calendar.scheduled=blue
+color.calendar.today=underline
+color.calendar.weekend=none
+color.calendar.weeknumber=none
+
+# --- Command: sync --------------------------------------------------------
+color.sync.added=green
+color.sync.changed=yellow
+color.sync.rejected=red
+
+# --- Command: undo --------------------------------------------------------
+color.undo.before=yellow
+color.undo.after=green
