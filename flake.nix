@@ -33,9 +33,13 @@
       url = "github:AvengeMedia/DankMaterialShell/stable";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # NOTE: do not `follows` nixpkgs here. hermes-agent's desktop.nix pins an
-    # `electronHeaders` sha256 against the electron version of its own locked
-    # nixpkgs; following ours drifts the electron version and breaks the hash.
+    # NOTE: still not following nixpkgs. The original reason no longer applies:
+    # hermes-agent's desktop.nix used to pin an `electronHeaders` sha256 against
+    # the electron version of its own locked nixpkgs. As of rev 0670ba45240b that
+    # fetchurl is gone -- node-pty now builds against nixpkgs' own
+    # `electron.headers`, which is version-locked to `electron` and needs no
+    # hand-pinned hash. Following is therefore *possible* now, but is untested
+    # against its python/uv2nix pins, so this stays as-is until someone tries it.
     hermes-agent.url = "github:NousResearch/hermes-agent";
     # opencode v2, packaged from official prebuilt binaries by
     # github:Coleej/opencode-v2. Also deliberately not following nixpkgs: the
