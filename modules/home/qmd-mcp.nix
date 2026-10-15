@@ -4,7 +4,8 @@
   # Claude Code sessions. Point Claude Code's mcpServers config at
   # http://localhost:8181/mcp.
   #
-  # Imported only on hosts with real GPU access (thinkpad, amd-workstation).
+  # Imported only on hosts with real GPU access — every desktop host, via
+  # modules/home/default.nix (x1, thinkpad, amd-workstation).
   # wsl is excluded: WSL2 has no real GPU passthrough (node-llama-cpp falls
   # back to slow CPU inference there), so that Claude Code instance instead
   # points at a GPU-accelerated qmd server running natively on the Windows

@@ -18,6 +18,7 @@ in {
     # Battery widget backend
     services.upower.enable = lib.mkDefault true;
     # polkit itself comes from hyprspace.services; DMS provides the agent UI.
-    # Deliberately no power-profiles-daemon here: thinkpad runs TLP.
+    # Deliberately no power-profiles-daemon here: the laptops (x1, thinkpad)
+    # run TLP; amd-workstation enables it in its own system.nix.
   };
 }
