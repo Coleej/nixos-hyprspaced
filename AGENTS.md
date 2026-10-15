@@ -3,8 +3,10 @@
 ## Overview
 
 Flake-based NixOS configuration with Hyprland (Wayland compositor), Home Manager, and sops-nix
-secrets. Three hosts are defined in `flake.nix`'s `hosts` attrset: `thinkpad` and `amd-workstation`
-(Hyprland desktops) and `wsl` (headless NixOS-WSL, terminal-only) — more can be added the same way.
+secrets. Four hosts are defined in `flake.nix`'s `hosts` attrset: `x1`, `thinkpad`, and
+`amd-workstation` (Hyprland desktops) and `wsl` (headless NixOS-WSL, terminal-only) — more can be
+added the same way. **`thinkpad` is decommissioned for now**: its config is kept and still builds,
+but the machine isn't in use — `x1` is the active laptop. Use `x1` in examples and when testing.
 
 The desktop shell is switchable via the `hyprspace.shell` enum (`"waybar"` | `"dankshell"`), set in
 `modules/shared/default.nix`. DankMaterialShell (DMS) replaces waybar, wofi, dunst, hyprpaper,
@@ -19,12 +21,13 @@ selects the Home Manager entrypoint (default `./home.nix`; WSL uses `./home-wsl.
 hyprspace/
 ├── flake.nix                  # Flake inputs (nixpkgs, home-manager, hyprland, hypr-binds, sops-nix, dms) + hosts attrset
 ├── hosts/
-│   ├── thinkpad/
+│   ├── x1/                    # Active laptop (Intel Iris Xe, no dGPU)
 │   │   ├── system.nix          # Host NixOS config (imports modules/shared)
 │   │   ├── hardware-configuration.nix
 │   │   └── monitors.lua        # Per-host monitor layout
+│   ├── thinkpad/              # Decommissioned for now — same layout as x1, kept buildable
 │   ├── amd-workstation/
-│   │   ├── system.nix          # Same as thinkpad, plus hyprspace.hyprland.amd.enable + hyprspace.gaming.enable
+│   │   ├── system.nix          # Same as x1, plus hyprspace.hyprland.amd.enable + hyprspace.gaming.enable
 │   │   ├── hardware-configuration.nix
 │   │   └── monitors.lua
 │   └── wsl/
@@ -76,7 +79,7 @@ hyprspace/
 │   ├── taskwarrior/
 │   │   └── adaptive.theme      # Background-free colour theme (readable on light + dark terminals), included by modules/home/taskwarrior.nix
 │   └── waybar/
-│       ├── config.json         # thinkpad (has battery)
+│       ├── config.json         # x1, thinkpad (has battery)
 │       ├── config-amd-workstation.json  # (no battery module — see hosts/*/system.nix comment)
 │       └── base.css, cyberpunk.css, catppuccin-*.css  # Theme variants; active theme selected via
 │                                                        # hyprspace.waybar.stylePath in each host's
@@ -99,25 +102,25 @@ hyprspace/
 ### Evaluate the full configuration
 ```bash
 # System config
-nix eval .#nixosConfigurations.thinkpad.config.system.build.toplevel --json
+nix eval .#nixosConfigurations.x1.config.system.build.toplevel --json
 
 # Home Manager user config
-nix eval .#nixosConfigurations.thinkpad.config.home-manager.users.cody --json
+nix eval .#nixosConfigurations.x1.config.home-manager.users.cody --json
 ```
 
 ### Build and apply
 ```bash
 # Dry-run / type-check
-sudo nixos-rebuild dry-activate --flake .#thinkpad        # or .#amd-workstation
+sudo nixos-rebuild dry-activate --flake .#x1        # or .#amd-workstation
 
 # Apply (system + Home Manager - use this!)
-sudo nixos-rebuild switch --flake .#thinkpad
+sudo nixos-rebuild switch --flake .#x1
 
 # Build only (no switch)
-nixos-rebuild build --flake .#thinkpad
+nixos-rebuild build --flake .#x1
 
 # Home Manager only (faster iteration, no system rebuild)
-home-manager switch --flake .#thinkpad
+home-manager switch --flake .#x1
 ```
 
 ### Formatting / Linting
@@ -164,7 +167,7 @@ nix eval --file ./modules/shared/hyprland.nix --apply 'x: x.options.hyprspace.hy
   `programs.*`/`home.*`/`services.*` — no namespace indirection.
 - **Option names**: `lowerCamelCase` (matches NixOS convention).
 - **File names**: `kebab-case.nix` for modules.
-- **Host names**: `thinkpad`, `amd-workstation`, `wsl`. Add more the same way in `flake.nix`.
+- **Host names**: `x1`, `thinkpad` (decommissioned for now), `amd-workstation`, `wsl`. Add more the same way in `flake.nix`.
 
 ### Nixpkgs Usage
 - **Package sets**: Always `pkgs.<name>`. No bare package names.
@@ -228,11 +231,11 @@ quickshell 0.3.1+ from nixpkgs is used.
 2. Create directory and copy hardware config:
    ```bash
    mkdir -p hosts/workstation
-   cp hosts/thinkpad/hardware-configuration.nix hosts/workstation/
-   cp hosts/thinkpad/monitors.lua hosts/workstation/
+   cp hosts/x1/hardware-configuration.nix hosts/workstation/
+   cp hosts/x1/monitors.lua hosts/workstation/
    ```
 
-3. Edit `hosts/workstation/system.nix` (copy from `hosts/thinkpad/system.nix` as a starting point):
+3. Edit `hosts/workstation/system.nix` (copy from `hosts/x1/system.nix` as a starting point):
    - `hyprspace.hyprland.monitorsFile` should point at `./monitors.lua`
    - Update `networking.hostName`
 
@@ -275,7 +278,7 @@ Don't put GPU-specific `env` in the shared `configs/hyprland.lua`.
 
 ## Current Status
 
-greetd+tuigreet is the display manager for all graphical hosts (thinkpad, amd-workstation). The
+greetd+tuigreet is the display manager for all graphical hosts (x1, thinkpad, amd-workstation). The
 `dankshell` branch implements the DankMaterialShell stack behind `hyprspace.shell` (see **Desktop
 shell switch**); master stays on the waybar stack until merged.
 
@@ -286,7 +289,7 @@ shell switch**); master stays on the waybar stack until merged.
 ## Workflow Tips
 
 - **Pre-commit hook**: Installed via `.githooks/pre-commit`. Run `git config core.hooksPath .githooks` on new clones to enable it. Auto-formats staged `.nix` files with alejandra before each commit.
-- **Debugging**: Use `nix eval .#nixosConfigurations.thinkpad.config.hyprspace.hyprland.enable`
+- **Debugging**: Use `nix eval .#nixosConfigurations.x1.config.hyprspace.hyprland.enable`
 - **flake.lock**: Commit it for reproducible builds. Update with `nix flake update`
 - **Secrets**: Edit `secrets/secrets.yaml` with `sops secrets/secrets.yaml` — never hand-edit the
   encrypted file directly.
