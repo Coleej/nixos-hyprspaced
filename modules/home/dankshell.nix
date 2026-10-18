@@ -26,7 +26,15 @@ in {
       # codify here later if desired.
     };
 
-    # System monitoring widget backend (dgop)
-    home.packages = [pkgs.dgop];
+    # System monitoring widget backend (dgop), plus adw-gtk3 for dynamic GTK3
+    # theming. DMS's scripts/gtk.sh locates adw-gtk3{,-dark} through
+    # XDG_DATA_DIRS, copies them into ~/.local/share/themes and patches them
+    # with the generated palette so GTK3 apps (Evolution) follow light/dark.
+    # Without it DMS only injects a static @import into gtk-3.0/gtk.css, which
+    # GTK caches -- colors land but need an app restart to refresh.
+    home.packages = [
+      pkgs.adw-gtk3
+      pkgs.dgop
+    ];
   };
 }
