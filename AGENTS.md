@@ -213,6 +213,83 @@ The DMS flake input is `github:AvengeMedia/DankMaterialShell/stable`. first buil
 `dms` Go CLI from source (a few minutes). `dgop` (system monitoring) comes from nixpkgs;
 quickshell 0.3.1+ from nixpkgs is used.
 
+## DMS application theming
+
+DMS drives light/dark from one place. On theme switch (and wallpaper change) it rewrites
+`org.gnome.desktop.interface color-scheme` and re-runs matugen, regenerating per-app
+theme files. Applications pick these up at different rates.
+
+**Home Manager must not pin any key DMS owns.** On the dankshell stack
+`modules/home/desktop.nix` sets `gtk.theme = null` and `gtk.colorScheme = null` so HM emits
+neither `color-scheme` nor `gtk-theme`, and `modules/home/dankshell.nix` adds `pkgs.adw-gtk3`.
+Re-asserting either key makes the desktop fight itself and revert on every activation
+(upstream `AvengeMedia/DankMaterialShell#2786`). GTK3 resolves its theme name only from
+`~/.config/gtk-3.0/settings.ini`, never gsettings, so the name is pinned via
+`gtk3.extraConfig` — which HM merges into settings.ini *only*.
+
+| App | Picks up changes | Requires |
+| --- | --- | --- |
+| GTK4 / libadwaita | live | nothing (follows the gsettings key) |
+| GTK3 (Evolution) | live | `pkgs.adw-gtk3` + **Apply GTK Colors** in DMS settings |
+| Neovim | on `:colorscheme dms` | `matugenTemplateNeovim` toggle + `AvengeMedia/base46` |
+| Firefox (Material Fox) | live | see below |
+| Alacritty | live | nothing (imports `dank-theme.toml`) |
+
+### Per-host setup that does NOT come from Nix
+
+Three steps are machine-local and must be repeated on each new host. Nothing here is
+managed by the flake, and DMS settings in particular are per-machine:
+
+1. **DMS → Settings → Theme & Colors → Apply GTK Colors.** Installs `pkgs.adw-gtk3` via
+   Nix, but DMS still has to copy and patch it into `~/.local/share/themes`. Without this
+   GTK3 apps get colours only on restart; with it they follow live. This is what makes
+   Evolution track the desktop.
+2. **DMS → Settings → Theme & Colors → neovim template toggle.** Defaults to `false`
+   (`SettingsData.qml`), so `~/.config/nvim/colors/dms.lua` and the lualine theme are not
+   generated until it is on. Can also be set without the GUI:
+   `dms ipc call settings set matugenTemplateNeovim true`.
+3. **Firefox Material Fox extract.** A one-time manual install; the assets are not vendored
+   in this repo. Firefox's profile dir is `~/.config/mozilla/firefox/<random>.default` —
+   note this is **not** `~/.mozilla` as the DMS docs state, which is stale for Firefox 158:
+
+   ```bash
+   # Default=1 comes *after* Path= within its block, so capture Path and only
+   # print once Default=1 is seen -- matching /^Default=1/ before Path= never fires.
+   PROFILE=$(awk '/^\[/{p="";next} /^Path=/{p=substr($0,6)} /^Default=1/{if(p!=""){print p;exit}}' \
+     ~/.config/mozilla/firefox/profiles.ini)
+   PROFILE=~/.config/mozilla/firefox/$PROFILE
+   curl -sSL -o /tmp/chrome.zip \
+     https://github.com/edelvarden/material-fox-updated/releases/download/v2.0.0/chrome.zip
+   unzip -oq /tmp/chrome.zip -d "$PROFILE"
+   rm -f "$PROFILE/chrome/theme-material-blue.css"
+   ln -sf ~/.config/DankMaterialShell/firefox.css "$PROFILE/chrome/theme-material-blue.css"
+   ```
+
+   The symlink matters: `configs/firefox/user.js` (installed automatically into the default
+   profile by the `installFirefoxMaterialFox` activation hook) only sets prefs. Without the
+   extracted assets there is no Material Fox theme at all.
+
+### Firefox profile gotchas
+
+- **`extensions.webextensions.uuids` is load-bearing.** Each extension's data lives in
+  `storage/default/moz-extension+++<uuid>` and that pref is the only pointer to it. If it is
+  ever lost, Firefox assigns fresh uuids, orphans every storage directory, and **all
+  extensions silently lose their settings, tokens and logins while still reporting as
+  enabled in `about:addons`**. Never delete `prefs.js` on a profile with extensions.
+  The UUIDs are per-machine, so they are deliberately *not* in `configs/firefox/user.js`;
+  the activation hook instead preserves whatever map the destination profile already has.
+  To rebuild a lost map, pair each extension ID with the UUID of an existing
+  `moz-extension+++` storage directory.
+- **An active WebExtension theme pins `prefers-color-scheme`** and overrides
+  `widget.systemUsesDarkTheme` entirely. The `firefox-compact-*` builtins caused Firefox to
+  stay dark regardless of the desktop scheme. The shipped `user.js` selects
+  `default-theme@mozilla.org` and disables crash-session restore, because a stored session
+  re-applies whichever theme was active when it was written. If theming regresses, check
+  about:addons → Themes.
+- **Home Manager activation has a minimal PATH** — no `awk`, `grep` or `sed`. Activation
+  scripts here must use bash builtins plus coreutils, and must escape `${...}` as `''${...}`
+  to survive Nix interpolation inside indented strings.
+
 ## Adding a New Host
 
 1. Add entry to `flake.nix` `hosts` attr:
@@ -245,6 +322,10 @@ quickshell 0.3.1+ from nixpkgs is used.
    `hostName`) — it throws if a host isn't listed there.
 
 6. Rebuild: `sudo nixos-rebuild switch --flake .#workstation`
+
+7. Do the **per-host DMS theming setup** — Apply GTK Colors, the neovim template toggle, and
+   the Firefox Material Fox extract. None of it comes from Nix. See
+   [DMS application theming](#dms-application-theming).
 
 ## Known Issues
 
