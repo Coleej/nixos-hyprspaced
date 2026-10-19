@@ -69,7 +69,29 @@ in {
           esac
         done < "$ffroot/profiles.ini"
         if [ -n "$profile_rel" ] && [ -d "$ffroot/$profile_rel" ]; then
+          # Preserve extensions.webextensions.uuids. That pref maps each
+          # extension ID to the UUID naming its storage directory, and it is
+          # the only pointer to that data. It is per-machine, so it cannot be
+          # shipped in configs/firefox/user.js, but it must survive a rebuild:
+          # if it is lost Firefox assigns fresh uuids, orphans every storage
+          # directory, and all extensions silently lose their settings, tokens
+          # and logins while still reporting as enabled.
+          uuids=""
+          for f in user.js prefs.js; do
+            if [ -f "$ffroot/$profile_rel/$f" ]; then
+              while IFS= read -r line; do
+                case "$line" in
+                  user_pref\(\"extensions.webextensions.uuids\"*) uuids="$line" ;;
+                esac
+              done < "$ffroot/$profile_rel/$f"
+              [ -n "$uuids" ] && break
+            fi
+          done
+
           install -Dm644 "${self + /configs/firefox/user.js}" "$ffroot/$profile_rel/user.js"
+          if [ -n "$uuids" ]; then
+            printf '\n%s\n' "$uuids" >> "$ffroot/$profile_rel/user.js"
+          fi
         fi
       fi
     '';
