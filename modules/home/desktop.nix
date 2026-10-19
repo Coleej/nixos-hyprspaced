@@ -64,6 +64,11 @@ in {
       enable = true;
       theme = null;
       colorScheme = null;
+      # adw-gtk3 ships gtk.css (light) and gtk-dark.css (dark) in one
+      # directory, and gtk.sh patches whichever one the current mode needs.
+      # Leaving gtk-application-prefer-dark-theme unset lets GTK 3.24.22+ pick
+      # gtk-dark.css from the portal color-scheme, so one static name covers
+      # both modes without a watcher.
       gtk3.extraConfig.gtk-theme-name = "adw-gtk3";
     }
     else {

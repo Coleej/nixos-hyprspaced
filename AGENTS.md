@@ -230,10 +230,32 @@ Re-asserting either key makes the desktop fight itself and revert on every activ
 | App | Picks up changes | Requires |
 | --- | --- | --- |
 | GTK4 / libadwaita | live | nothing (follows the gsettings key) |
-| GTK3 (Evolution) | live | `pkgs.adw-gtk3` + **Apply GTK Colors** in DMS settings |
+| GTK3 (Evolution) | on restart if already running | `pkgs.adw-gtk3` + **Apply GTK Colors** in DMS settings |
 | Neovim | on `:colorscheme dms` | `matugenTemplateNeovim` toggle + `AvengeMedia/base46` |
 | Firefox (Material Fox) | live | see below |
 | Alacritty | live | nothing (imports `dank-theme.toml`) |
+
+### How GTK3 gets its colours
+
+`gtk.sh` copies `adw-gtk3` and `adw-gtk3-dark` into `~/.local/share/themes` and appends a
+`/* BEGIN DMS OVERRIDE */` block of `@define-color` rules to the end of the stylesheets, where
+they win the cascade. It patches per mode: light mode fills `adw-gtk3/gtk.css`, dark mode
+fills `adw-gtk3/gtk-dark.css`.
+
+HM pins `gtk-theme-name=adw-gtk3` and deliberately does **not** set
+`gtk-application-prefer-dark-theme`, so GTK 3.24.22+ selects `gtk-dark.css` from the portal
+color-scheme. One static name therefore covers both modes and needs no watcher — **provided
+the name stays `adw-gtk3`**. Pointing it at `adw-gtk3-dark` breaks light mode, because
+`gtk.sh` patches that directory's `gtk.css` with *light* colours.
+
+**adw-gtk3 and the global CSS import are mutually exclusive.** Without adw-gtk3, DMS falls back
+to injecting `@import url("dank-colors.css")` into `gtk-3.0/gtk.css`. But `gtk.sh apply` calls
+`ensure_user_adw_gtk3` first, which re-copies adw-gtk3 from `XDG_DATA_DIRS` on every run, so
+while the package is installed the fallback can never win — and a later **Apply GTK Colors**
+deletes the import again. Pick one route; do not mix them.
+
+GTK3 parses and caches CSS at startup, so an already-running app needs a restart to repaint
+after a switch.
 
 ### Per-host setup that does NOT come from Nix
 

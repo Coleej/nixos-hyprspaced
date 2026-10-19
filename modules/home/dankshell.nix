@@ -31,8 +31,9 @@ in {
     # theming. DMS's scripts/gtk.sh locates adw-gtk3{,-dark} through
     # XDG_DATA_DIRS, copies them into ~/.local/share/themes and patches them
     # with the generated palette so GTK3 apps (Evolution) follow light/dark.
-    # Without it DMS only injects a static @import into gtk-3.0/gtk.css, which
-    # GTK caches -- colors land but need an app restart to refresh.
+    # Without it DMS falls back to a global @import of dank-colors.css into
+    # gtk-3.0/gtk.css, which GTK caches -- colours land but need an app
+    # restart, and the import is removed again by any later Apply GTK Colors.
     home.packages = [
       pkgs.adw-gtk3
       pkgs.dgop
