@@ -104,6 +104,14 @@
     "nix-command"
     "flakes"
   ];
+  # Not imported from modules/shared/system.nix (desktop-only module), so set
+  # here. Without this the store grew to ~200 GB of old generations.
+  nix.settings.auto-optimise-store = true;
+  nix.gc = {
+    automatic = true;
+    dates = "weekly";
+    options = "--delete-older-than 14d";
+  };
   nixpkgs.config.allowUnfree = true;
 
   system.stateVersion = "26.05";
