@@ -47,7 +47,7 @@ hyprspace/
 │   │   └── android.nix         # Android Studio / SDK
 │   └── home/                  # Home Manager modules, plain HM options (no hyprspace.* namespace)
 │       ├── default.nix         # Desktop HM entrypoint (imports below) + session vars/path
-│       ├── packages.nix        # home.packages (CLI + GUI apps: firefox, obsidian, etc.)
+│       ├── packages.nix        # home.packages (CLI + GUI apps: firefox (wrapped: Sync theme lock), obsidian, etc.)
 │       ├── shell.nix           # Fish + Starship prompt + fzf + direnv (shared by desktop + WSL)
 │       ├── desktop.nix         # GTK theme, alacritty, wofi (gated by shell), hypr-binds, writes shell.lua, installs configs/* via home.file
 │       ├── dankshell.nix       # programs.dank-material-shell (gated by osConfig hyprspace.dankshell.enable)
@@ -76,6 +76,9 @@ hyprspace/
 │   ├── hyprlock-default.conf   # Template, __WALLPAPER__ substituted at activation (waybar stack)
 │   ├── hypridle-default.conf   # waybar stack
 │   ├── wofi-style.css
+│   ├── firefox/
+│   │   └── user.js               # Material Fox prefs; installed into the default profile by the
+│   │                             # installFirefoxMaterialFox hook in modules/home/dankshell.nix
 │   ├── taskwarrior/
 │   │   └── adaptive.theme      # Background-free colour theme (readable on light + dark terminals), included by modules/home/taskwarrior.nix
 │   └── waybar/
@@ -231,8 +234,8 @@ Re-asserting either key makes the desktop fight itself and revert on every activ
 | --- | --- | --- |
 | GTK4 / libadwaita | live | nothing (follows the gsettings key) |
 | GTK3 (Evolution) | on restart if already running | `pkgs.adw-gtk3` + **Apply GTK Colors** in DMS settings |
-| Neovim | on `:colorscheme dms` | `matugenTemplateNeovim` toggle + `AvengeMedia/base46` |
-| Firefox (Material Fox) | live | see below |
+| Neovim | live (fs_event watcher re-sources on change) | `matugenTemplateNeovim` toggle + `AvengeMedia/base46` |
+| Firefox (Material Fox) | live | see below — **requires the "System theme — auto" built-in theme**; any other theme (or a Firefox Color theme) pins the scheme |
 | Alacritty | live | nothing (imports `dank-theme.toml`) |
 
 ### How GTK3 gets its colours
@@ -302,12 +305,20 @@ managed by the flake, and DMS settings in particular are per-machine:
   the activation hook instead preserves whatever map the destination profile already has.
   To rebuild a lost map, pair each extension ID with the UUID of an existing
   `moz-extension+++` storage directory.
-- **An active WebExtension theme pins `prefers-color-scheme`** and overrides
-  `widget.systemUsesDarkTheme` entirely. The `firefox-compact-*` builtins caused Firefox to
-  stay dark regardless of the desktop scheme. The shipped `user.js` selects
-  `default-theme@mozilla.org` and disables crash-session restore, because a stored session
-  re-applies whichever theme was active when it was written. If theming regresses, check
-  about:addons → Themes.
+- **The active built-in theme must stay "System theme — auto".** Any other theme
+  (`firefox-compact-*`, AMO themes, a Firefox Color theme) pins `prefers-color-scheme` and
+  ignores the desktop. **Firefox Sync syncs the theme choice and enables the incoming theme
+  locally**; another device once flipped this profile to compact-dark, and a hand-edit of
+  `extensions.json` then left `addonStartup.json.lz4` (the add-on startup cache, what
+  startup actually trusts) stale, so Firefox kept starting dark. Recovery: quit Firefox,
+  move `<profile>/addonStartup.json.lz4` aside, start Firefox — the cache rebuilds from
+  `extensions.json`. It is a cache; extension storage and UUIDs are untouched. Sync is
+  now prevented from re-flipping it by `lockPref("services.sync.prefs.sync.extensions.activeThemeID",
+  false)` in the firefox wrapper's autoconfig (`modules/home/packages.nix`; a user.js
+  false is cleared mid-sync, hence the lock). Never hand-edit `extensions.json`; switch
+  themes in about:addons → Themes. The manual light/dark/device control there writes
+  `ui.systemUsesDarkTheme` (note: `widget.*` and `extensions.systemTheme.update.enabled`
+  are dead pref names — don't use them). Full story: `docs/dev/dms-theme-sync.md`.
 - **Home Manager activation has a minimal PATH** — no `awk`, `grep` or `sed`. Activation
   scripts here must use bash builtins plus coreutils, and must escape `${...}` as `''${...}`
   to survive Nix interpolation inside indented strings.

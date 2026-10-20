@@ -20,15 +20,16 @@ re-deriving anything. The user-facing runbook is the "DMS application theming" s
 | App | Follows DMS? | Notes |
 | --- | --- | --- |
 | Evolution (GTK3) | **Yes**, confirmed by the user | Already-running instances need a restart |
-| Neovim | **Yes**, verified | On `:colorscheme dms`; a running nvim does not notice on its own (Phase 4) |
-| Firefox | **Yes on x1 since 2026-10-19**, live, both directions | Fixed by hand: a stale add-on startup cache was removed (Part 2). Nix hardening against a repeat is still to do (Phase 1) |
+| Neovim | **Yes**, live since 2026-10-20 | fs_event watcher in `init.lua` re-sources on every switch (Phase 4, done) |
+| Firefox | **Yes on x1 since 2026-10-19**, live, both directions | Hand-fixed (stale add-on startup cache, Part 2) and Nix-hardened (Phase 1, done) |
 
 Branches, both **unmerged**:
 
-- `~/Projects/Nix/nixos-config`: `dms-theme-sync`, 7 commits on top of `master`
-  (`d3318fc` through `417e9cc`).
-- `~/.config/nvim` (separate repo, `origin` = `Coleej/nvim`): `dms-colorscheme`, 1 commit
-  (`7c395bc`).
+- `~/Projects/Nix/nixos-config`: `dms-theme-sync`, 11 commits on top of `master`
+  (`d3318fc` through `b884c55`). Phases 1–5 are implemented on it; Phase 6 (merge +
+  amd-workstation rollout) is open.
+- `~/.config/nvim` (separate repo, `origin` = `Coleej/nvim`): `dms-colorscheme`, 2 commits
+  (`7c395bc`, `ea39e1f`).
 
 The user wants to verify everything before merging. Nothing has been merged.
 
@@ -243,20 +244,31 @@ J     app-builtin firefox-compact-dark@mozilla.org enabled False
 - The `addonStartup.json.lz4` format is `mozLz40\0` + u32 size + one LZ4 block. A
   dependency-free decoder is in Part 4.
 
-## Not yet verified
+## Verified later (2026-10-20)
 
-- **Material Fox chrome actually loading.** The shell switch is confirmed, but none of
-  today's screenshots clearly show Material Fox styling, as opposed to stock Proton
-  following the system scheme. Check `about:support` → "userChrome.css customizations" or
-  compare with the pref off (Phase 2).
-- **The Sync flip being prevented by a locked control pref.** The mechanism comes from
-  reading the source, not from a repro. Phase 1 contains the test.
-- Whether another device on the account still uploads `firefox-compact-dark`. If it does,
-  x1 would flip again on the next prefs sync without the Phase 1 lock.
+- **Material Fox is in effect on x1**: acceptance-run screenshots show the customized
+  chrome (extension icons, rounded tabs, DMS palette) following DMS live.
+- **The Sync lock works**: `lockPref("services.sync.prefs.sync.extensions.activeThemeID",
+  false)` is in the wrapped `mozilla.cfg` (Phase 1). `clearPref()` in the same file was
+  verified on a scratch profile to purge the four stale prefs from `prefs.js` at startup.
+- **The acceptance test passed on the real profile** with the new wrapper: dark at dark
+  start, live `change` events both directions.
+- **`-safeMode` in content-process command lines is normal**, not Troubleshoot Mode. Do
+  not read anything into it.
+- Still unknown: whether another device on the account still uploads
+  `firefox-compact-dark`. With the lock it no longer matters on these hosts (Phase 6.3
+  suggests switching that device to "System theme — auto" anyway).
 
 ---
 
 # Part 3 — Implementation plan
+
+**Status 2026-10-20: Phases 1, 2, 4 and 5 are done** (commits `672da55`, `c3cc077` in this
+repo, `ea39e1f` in the nvim repo). Phase 3 needed no work. Phase 6 (merge, amd-workstation
+rollout) is open. Deviations from the original text below: Phase 1 step 5 was done with
+`clearPref()` in `mozilla.cfg` instead of manual `about:config` resets (verified on a
+scratch profile to purge `prefs.js` at startup); Phase 2 chose Option A; Phase 4 needed no
+lualine handling because lualine is not installed.
 
 Order matters: Phase 1 prevents the regression that cost two sessions, and the rest builds
 on it. Each phase lists files, the change, and acceptance tests. Run the
@@ -338,15 +350,17 @@ contains only prefs that are correct.
    while Firefox may be open, and the PATH has no lz4 or python. With the Sync lock in place
    the stale-cache state should not recur. Document the manual recovery instead (Phase 5).
 
-5. **Manual, x1 only:** with Firefox running, open `about:config` and reset (the
-   circular-arrow button) `widget.systemUsesDarkTheme` and
-   `extensions.systemTheme.update.enabled`. After the rebuild, also reset
-   `toolkit.startup.max_resumed_crashes` and `browser.sessionstore.resume_from_crash`.
-   Removing a pref from `user.js` does not remove it from `prefs.js`. Never edit
-   `prefs.js` by hand.
+5. **Clear the stale prefs** left in `prefs.js` by earlier experiments
+   (`widget.systemUsesDarkTheme`, `extensions.systemTheme.update.enabled`,
+   `toolkit.startup.max_resumed_crashes`, `browser.sessionstore.resume_from_crash`).
+   Removing a pref from `user.js` does not unset it, so use `clearPref(...)` lines in the
+   same `extraPrefs`/`mozilla.cfg` — no GUI needed, and it re-applies on every start.
+   Never edit `prefs.js` by hand. (Implemented in `c3cc077`; verified on a scratch profile
+   that the four entries disappear at startup while unrelated prefs survive.)
 
 Phase 1 is done when: the Firefox acceptance test passes on x1, about:config shows the lock,
 the four stale prefs show as default, and `home-manager-cody.service` is active.
+(All verified 2026-10-20 except the about:config eyeball, which is cosmetic.)
 
 ## Phase 2 — Material Fox: verify, then decide on vendoring
 
@@ -358,7 +372,8 @@ the four stale prefs show as default, and `home-manager-cody.service` is active.
    `theme-material-blue.css` symlink target, or a Material Fox v2.0.0 incompatibility with
    Firefox 158).
 2. Decide with the user whether to keep the one-time manual extract (current state,
-   documented in `AGENTS.md`) or let Nix own the assets:
+   documented in `AGENTS.md`) or let Nix own the assets. **Decided 2026-10-20: Option A**
+   (keep manual; the hook repairs the symlink).
    - **Option A (recommended): keep it manual.** The assets are about 300 KB of third-party
      CSS/SVG, and the profile path is random per machine. The activation hook already finds
      the profile, so the manual step is a single snippet.
@@ -391,8 +406,10 @@ Running nvim instances keep the old palette until `:colorscheme dms`. Implement 
   `fs_event` watcher on the **directory** `stdpath('config')/colors`. Watch the directory
   because matugen may replace the file by rename, which ends a watch on the file itself. On a
   change event for `dms.lua`, debounce about 200 ms, then
-  `vim.schedule(function() vim.cmd.colorscheme 'dms' end)`, and reload lualine with
-  `require('lualine').setup(...)` or `require('lualine').refresh()`.
+  `vim.schedule(function() vim.cmd.colorscheme 'dms' end)`. Keep the handles in `_G` so
+  garbage collection cannot close them. (Implemented in nvim `ea39e1f`; lualine is not
+  installed here, so no statusline handling was needed. Verified headless: appending to
+  `dms.lua` re-sources the scheme.)
 - Guard: only when `vim.g.colors_name == 'dms'`, so a user who switched colourscheme by hand
   is left alone.
 - Alternative, if the watcher proves flaky: a user matugen config with a `post_hook` that
