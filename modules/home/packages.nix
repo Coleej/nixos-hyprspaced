@@ -15,6 +15,14 @@
   firefox-locked = pkgs.firefox.override {
     extraPrefs = ''
       lockPref("services.sync.prefs.sync.extensions.activeThemeID", false);
+      // Leftovers from earlier experiments still sit in prefs.js (removing a
+      // pref from user.js does not unset it); clearPref returns them to
+      // defaults at every start. The two widget./systemTheme prefs do not
+      // exist in Firefox 158 at all.
+      clearPref("widget.systemUsesDarkTheme");
+      clearPref("extensions.systemTheme.update.enabled");
+      clearPref("toolkit.startup.max_resumed_crashes");
+      clearPref("browser.sessionstore.resume_from_crash");
     '';
   };
 in {
