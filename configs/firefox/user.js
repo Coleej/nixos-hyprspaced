@@ -10,22 +10,13 @@ user_pref("svg.context-properties.content.enabled", true);
 // DankMaterialShell regenerates on every theme switch.
 user_pref("userChrome.theme-material", true);
 
-// Use the built-in theme that follows the system colour scheme, so Firefox
-// picks up the org.gnome.desktop.interface color-scheme that DankMaterialShell
-// writes and selects the matching Material Fox palette.
-//
-// This is load-bearing: an active WebExtension theme (the firefox-compact-*
-// builtins) pins prefers-color-scheme and overrides
-// widget.systemUsesDarkTheme entirely, which is what kept Firefox dark
-// regardless of the desktop scheme. Switch the active theme to the default one
-// in about:addons -> Themes if this ever stops taking effect.
-user_pref("extensions.activeThemeID", "default-theme@mozilla.org");
-
-// Do not restore a crash session. A stored session re-applies whichever theme
-// was active when it was written, re-pinning the dark theme on every start and
-// defeating the activeThemeID pref above.
-user_pref("toolkit.startup.max_resumed_crashes", 0);
-user_pref("browser.sessionstore.resume_from_crash", false);
+// Theme selection is deliberately NOT pinned here. The active theme is owned
+// by Firefox's add-on database and its addonStartup.json.lz4 cache, not by
+// the extensions.activeThemeID pref, and Firefox Sync is stopped from changing
+// it by the locked services.sync.prefs.sync.extensions.activeThemeID pref in
+// modules/home/packages.nix. Select "System theme -- auto" in about:addons ->
+// Themes; any other theme (including a Firefox Color theme) pins
+// prefers-color-scheme and ignores the desktop. See docs/dev/dms-theme-sync.md.
 
 // NOTE: extensions.webextensions.uuids is deliberately NOT in this file.
 //

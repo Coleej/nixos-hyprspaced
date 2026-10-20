@@ -47,12 +47,17 @@ in {
     #
     # configs/firefox/user.js is installed into whichever profile profiles.ini
     # marks Default, because Firefox names profile directories with a random
-    # suffix that Nix cannot predict. It pins the three prefs Material Fox
-    # needs and selects the follow-the-system theme -- an active
-    # firefox-compact-* WebExtension theme pins prefers-color-scheme to dark
-    # and overrides widget.systemUsesDarkTheme, which is what kept Firefox
-    # dark no matter what the desktop did. Disabling crash-session restore
-    # stops a stored session from re-applying that theme on the next start.
+    # suffix that Nix cannot predict. It pins only the three prefs Material Fox
+    # needs. Theme selection is deliberately not pinned: the add-on DB and its
+    # addonStartup.json.lz4 cache own it, and Firefox Sync is stopped from
+    # overriding it by the locked
+    # services.sync.prefs.sync.extensions.activeThemeID pref in
+    # modules/home/packages.nix. Select "System theme -- auto" in
+    # about:addons -> Themes; see docs/dev/dms-theme-sync.md.
+    #
+    # The hook also keeps the theme-material-blue.css symlink in place: DMS's
+    # firefox.css is a drop-in for that Material Fox file, and the link is the
+    # piece most likely to be lost (fresh profile, manual extract redone).
     home.activation.installFirefoxMaterialFox = lib.hm.dag.entryAfter ["linkGeneration"] ''
       # Deliberately bash builtins only. The NixOS activation environment has a
       # minimal PATH with no awk/grep/sed, so an external parser here fails the
@@ -92,6 +97,11 @@ in {
           install -Dm644 "${self + /configs/firefox/user.js}" "$ffroot/$profile_rel/user.js"
           if [ -n "$uuids" ]; then
             printf '\n%s\n' "$uuids" >> "$ffroot/$profile_rel/user.js"
+          fi
+          # Repoint the Material Fox palette at DMS's firefox.css. ln is
+          # coreutils, so it is on the activation PATH.
+          if [ -d "$ffroot/$profile_rel/chrome" ] && [ -e "$HOME/.config/DankMaterialShell/firefox.css" ]; then
+            ln -sfn "$HOME/.config/DankMaterialShell/firefox.css" "$ffroot/$profile_rel/chrome/theme-material-blue.css"
           fi
         fi
       fi
