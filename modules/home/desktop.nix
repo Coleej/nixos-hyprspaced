@@ -37,17 +37,54 @@
   # Hyprland config via ~/.config/hypr/shell.lua. "waybar" when unset.
   shellName = osConfig.hyprspace.shell or "waybar";
 in {
-  gtk = {
-    enable = true;
-    theme = {
-      name = "Adwaita-dark";
-      package = pkgs.gnome-themes-extra;
+  # On the dankshell stack DankMaterialShell owns light/dark, so Home Manager
+  # must not pin either of the two gsettings keys DMS writes itself:
+  #
+  #   org.gnome.desktop.interface color-scheme
+  #       -> Services/PortalService.qml setSystemColorScheme
+  #   org.gnome.desktop.interface gtk-theme
+  #       -> Common/Theme.qml refreshGtkTheme (adw-gtk3 / adw-gtk3-dark)
+  #
+  # Re-asserting either from HM makes the desktop fight itself and snap back on
+  # every activation (AvengeMedia/DankMaterialShell#2786). Hence theme and
+  # colorScheme are null in that branch: gtk.theme is what HM turns into a
+  # dconf gtk-theme write, and colorScheme is what it turns into
+  # color-scheme / gtk-application-prefer-dark-theme.
+  #
+  # GTK3 resolves its theme name only from ~/.config/gtk-3.0/settings.ini (it
+  # never reads gsettings), so the name is pinned there through extraConfig,
+  # which HM merges into settings.ini *only* and deliberately keeps out of dconf.
+  # adw-gtk3 ships gtk.css (light) and gtk-dark.css (dark) in one directory and
+  # DMS patches both with the generated palette, so a single name covers both
+  # modes. Not writing gtk-application-prefer-dark-theme lets GTK 3.24.22+ derive
+  # it from the portal color-scheme that DMS drives.
+  gtk =
+    if shellName == "dankshell"
+    then {
+      enable = true;
+      theme = null;
+      colorScheme = null;
+      # adw-gtk3 ships gtk.css (light) and gtk-dark.css (dark) in one
+      # directory, and gtk.sh patches whichever one the current mode needs.
+      # Leaving gtk-application-prefer-dark-theme unset lets GTK 3.24.22+ pick
+      # gtk-dark.css from the portal color-scheme, so one static name covers
+      # both modes without a watcher.
+      gtk3.extraConfig.gtk-theme-name = "adw-gtk3";
+    }
+    else {
+      enable = true;
+      theme = {
+        name = "Adwaita-dark";
+        package = pkgs.gnome-themes-extra;
+      };
+      colorScheme = "dark";
+      gtk3.extraConfig.gtk-application-prefer-dark-theme = true;
+      gtk4.extraConfig.gtk-application-prefer-dark-theme = true;
     };
-    gtk3.extraConfig.gtk-application-prefer-dark-theme = true;
-    gtk4.extraConfig.gtk-application-prefer-dark-theme = true;
-  };
 
-  dconf.settings."org/gnome/desktop/interface".color-scheme = "prefer-dark";
+  # Only the waybar stack pins the system color scheme; see the note above.
+  dconf.settings."org/gnome/desktop/interface".color-scheme =
+    lib.mkIf (shellName != "dankshell") "prefer-dark";
 
   programs.alacritty = {
     enable = true;

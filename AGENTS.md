@@ -47,7 +47,7 @@ hyprspace/
 │   │   └── android.nix         # Android Studio / SDK
 │   └── home/                  # Home Manager modules, plain HM options (no hyprspace.* namespace)
 │       ├── default.nix         # Desktop HM entrypoint (imports below) + session vars/path
-│       ├── packages.nix        # home.packages (CLI + GUI apps: firefox, obsidian, etc.)
+│       ├── packages.nix        # home.packages (CLI + GUI apps: firefox (wrapped: Sync theme lock), obsidian, etc.)
 │       ├── shell.nix           # Fish + Starship prompt + fzf + direnv (shared by desktop + WSL)
 │       ├── desktop.nix         # GTK theme, alacritty, wofi (gated by shell), hypr-binds, writes shell.lua, installs configs/* via home.file
 │       ├── dankshell.nix       # programs.dank-material-shell (gated by osConfig hyprspace.dankshell.enable)
@@ -76,6 +76,9 @@ hyprspace/
 │   ├── hyprlock-default.conf   # Template, __WALLPAPER__ substituted at activation (waybar stack)
 │   ├── hypridle-default.conf   # waybar stack
 │   ├── wofi-style.css
+│   ├── firefox/
+│   │   └── user.js               # Material Fox prefs; installed into the default profile by the
+│   │                             # installFirefoxMaterialFox hook in modules/home/dankshell.nix
 │   ├── taskwarrior/
 │   │   └── adaptive.theme      # Background-free colour theme (readable on light + dark terminals), included by modules/home/taskwarrior.nix
 │   └── waybar/
@@ -213,6 +216,113 @@ The DMS flake input is `github:AvengeMedia/DankMaterialShell/stable`. first buil
 `dms` Go CLI from source (a few minutes). `dgop` (system monitoring) comes from nixpkgs;
 quickshell 0.3.1+ from nixpkgs is used.
 
+## DMS application theming
+
+DMS drives light/dark from one place. On theme switch (and wallpaper change) it rewrites
+`org.gnome.desktop.interface color-scheme` and re-runs matugen, regenerating per-app
+theme files. Applications pick these up at different rates.
+
+**Home Manager must not pin any key DMS owns.** On the dankshell stack
+`modules/home/desktop.nix` sets `gtk.theme = null` and `gtk.colorScheme = null` so HM emits
+neither `color-scheme` nor `gtk-theme`, and `modules/home/dankshell.nix` adds `pkgs.adw-gtk3`.
+Re-asserting either key makes the desktop fight itself and revert on every activation
+(upstream `AvengeMedia/DankMaterialShell#2786`). GTK3 resolves its theme name only from
+`~/.config/gtk-3.0/settings.ini`, never gsettings, so the name is pinned via
+`gtk3.extraConfig` — which HM merges into settings.ini *only*.
+
+| App | Picks up changes | Requires |
+| --- | --- | --- |
+| GTK4 / libadwaita | live | nothing (follows the gsettings key) |
+| GTK3 (Evolution) | on restart if already running | `pkgs.adw-gtk3` + **Apply GTK Colors** in DMS settings |
+| Neovim | live (fs_event watcher re-sources on change) | `matugenTemplateNeovim` toggle + `AvengeMedia/base46` |
+| Firefox (Material Fox) | live | see below — **requires the "System theme — auto" built-in theme**; any other theme (or a Firefox Color theme) pins the scheme |
+| Alacritty | live | nothing (imports `dank-theme.toml`) |
+
+### How GTK3 gets its colours
+
+`gtk.sh` copies `adw-gtk3` and `adw-gtk3-dark` into `~/.local/share/themes` and appends a
+`/* BEGIN DMS OVERRIDE */` block of `@define-color` rules to the end of the stylesheets, where
+they win the cascade. It patches per mode: light mode fills `adw-gtk3/gtk.css`, dark mode
+fills `adw-gtk3/gtk-dark.css`.
+
+HM pins `gtk-theme-name=adw-gtk3` and deliberately does **not** set
+`gtk-application-prefer-dark-theme`, so GTK 3.24.22+ selects `gtk-dark.css` from the portal
+color-scheme. One static name therefore covers both modes and needs no watcher — **provided
+the name stays `adw-gtk3`**. Pointing it at `adw-gtk3-dark` breaks light mode, because
+`gtk.sh` patches that directory's `gtk.css` with *light* colours.
+
+**adw-gtk3 and the global CSS import are mutually exclusive.** Without adw-gtk3, DMS falls back
+to injecting `@import url("dank-colors.css")` into `gtk-3.0/gtk.css`. But `gtk.sh apply` calls
+`ensure_user_adw_gtk3` first, which re-copies adw-gtk3 from `XDG_DATA_DIRS` on every run, so
+while the package is installed the fallback can never win — and a later **Apply GTK Colors**
+deletes the import again. Pick one route; do not mix them.
+
+GTK3 parses and caches CSS at startup, so an already-running app needs a restart to repaint
+after a switch.
+
+### Per-host setup that does NOT come from Nix
+
+Three steps are machine-local and must be repeated on each new host. Nothing here is
+managed by the flake, and DMS settings in particular are per-machine:
+
+1. **DMS → Settings → Theme & Colors → Apply GTK Colors.** Installs `pkgs.adw-gtk3` via
+   Nix, but DMS still has to copy and patch it into `~/.local/share/themes`. Without this
+   GTK3 apps get colours only on restart; with it they follow live. This is what makes
+   Evolution track the desktop.
+2. **DMS → Settings → Theme & Colors → neovim template toggle.** Defaults to `false`
+   (`SettingsData.qml`), so `~/.config/nvim/colors/dms.lua` and the lualine theme are not
+   generated until it is on. Can also be set without the GUI:
+   `dms ipc call settings set matugenTemplateNeovim true`.
+3. **Firefox Material Fox extract.** A one-time manual install; the assets are not vendored
+   in this repo. Firefox's profile dir is `~/.config/mozilla/firefox/<random>.default` —
+   note this is **not** `~/.mozilla` as the DMS docs state, which is stale for Firefox 158:
+
+   ```bash
+   # Default=1 comes *after* Path= within its block, so capture Path and only
+   # print once Default=1 is seen -- matching /^Default=1/ before Path= never fires.
+   PROFILE=$(awk '/^\[/{p="";next} /^Path=/{p=substr($0,6)} /^Default=1/{if(p!=""){print p;exit}}' \
+     ~/.config/mozilla/firefox/profiles.ini)
+   PROFILE=~/.config/mozilla/firefox/$PROFILE
+   curl -sSL -o /tmp/chrome.zip \
+     https://github.com/edelvarden/material-fox-updated/releases/download/v2.0.0/chrome.zip
+   unzip -oq /tmp/chrome.zip -d "$PROFILE"
+   rm -f "$PROFILE/chrome/theme-material-blue.css"
+   ln -sf ~/.config/DankMaterialShell/firefox.css "$PROFILE/chrome/theme-material-blue.css"
+   ```
+
+   The symlink matters: `configs/firefox/user.js` (installed automatically into the default
+   profile by the `installFirefoxMaterialFox` activation hook) only sets prefs. Without the
+   extracted assets there is no Material Fox theme at all.
+
+### Firefox profile gotchas
+
+- **`extensions.webextensions.uuids` is load-bearing.** Each extension's data lives in
+  `storage/default/moz-extension+++<uuid>` and that pref is the only pointer to it. If it is
+  ever lost, Firefox assigns fresh uuids, orphans every storage directory, and **all
+  extensions silently lose their settings, tokens and logins while still reporting as
+  enabled in `about:addons`**. Never delete `prefs.js` on a profile with extensions.
+  The UUIDs are per-machine, so they are deliberately *not* in `configs/firefox/user.js`;
+  the activation hook instead preserves whatever map the destination profile already has.
+  To rebuild a lost map, pair each extension ID with the UUID of an existing
+  `moz-extension+++` storage directory.
+- **The active built-in theme must stay "System theme — auto".** Any other theme
+  (`firefox-compact-*`, AMO themes, a Firefox Color theme) pins `prefers-color-scheme` and
+  ignores the desktop. **Firefox Sync syncs the theme choice and enables the incoming theme
+  locally**; another device once flipped this profile to compact-dark, and a hand-edit of
+  `extensions.json` then left `addonStartup.json.lz4` (the add-on startup cache, what
+  startup actually trusts) stale, so Firefox kept starting dark. Recovery: quit Firefox,
+  move `<profile>/addonStartup.json.lz4` aside, start Firefox — the cache rebuilds from
+  `extensions.json`. It is a cache; extension storage and UUIDs are untouched. Sync is
+  now prevented from re-flipping it by `lockPref("services.sync.prefs.sync.extensions.activeThemeID",
+  false)` in the firefox wrapper's autoconfig (`modules/home/packages.nix`; a user.js
+  false is cleared mid-sync, hence the lock). Never hand-edit `extensions.json`; switch
+  themes in about:addons → Themes. The manual light/dark/device control there writes
+  `ui.systemUsesDarkTheme` (note: `widget.*` and `extensions.systemTheme.update.enabled`
+  are dead pref names — don't use them). Full story: `docs/dev/dms-theme-sync.md`.
+- **Home Manager activation has a minimal PATH** — no `awk`, `grep` or `sed`. Activation
+  scripts here must use bash builtins plus coreutils, and must escape `${...}` as `''${...}`
+  to survive Nix interpolation inside indented strings.
+
 ## Adding a New Host
 
 1. Add entry to `flake.nix` `hosts` attr:
@@ -245,6 +355,10 @@ quickshell 0.3.1+ from nixpkgs is used.
    `hostName`) — it throws if a host isn't listed there.
 
 6. Rebuild: `sudo nixos-rebuild switch --flake .#workstation`
+
+7. Do the **per-host DMS theming setup** — Apply GTK Colors, the neovim template toggle, and
+   the Firefox Material Fox extract. None of it comes from Nix. See
+   [DMS application theming](#dms-application-theming).
 
 ## Known Issues
 
