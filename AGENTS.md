@@ -213,7 +213,7 @@ desktops; a host can override with `lib.mkForce`.
   values without `enable = true`, so flipping back to `"waybar"` restores the full old stack.
 
 The DMS flake input is `github:AvengeMedia/DankMaterialShell/stable`. first build compiles the
-`dms` Go CLI from source (a few minutes). `dgop` (system monitoring) comes from nixpkgs;
+`dms` Go CLI from source (a few minutes). `dux-gop` (system monitoring; binary still named `dgop`) comes from nixpkgs;
 quickshell 0.3.1+ from nixpkgs is used.
 
 ## DMS application theming

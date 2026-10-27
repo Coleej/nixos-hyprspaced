@@ -27,7 +27,8 @@ in {
       # codify here later if desired.
     };
 
-    # System monitoring widget backend (dgop), plus adw-gtk3 for dynamic GTK3
+    # System monitoring widget backend (dux-gop, binary still named dgop), plus
+    # adw-gtk3 for dynamic GTK3
     # theming. DMS's scripts/gtk.sh locates adw-gtk3{,-dark} through
     # XDG_DATA_DIRS, copies them into ~/.local/share/themes and patches them
     # with the generated palette so GTK3 apps (Evolution) follow light/dark.
@@ -36,7 +37,7 @@ in {
     # restart, and the import is removed again by any later Apply GTK Colors.
     home.packages = [
       pkgs.adw-gtk3
-      pkgs.dgop
+      pkgs.dux-gop
     ];
 
     # Firefox / Material Fox. DMS regenerates
