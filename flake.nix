@@ -3,6 +3,10 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    # azure-cli only, for the wsl host. Pinned to the nixpkgs rev before the
+    # invoke 3.x bump, which marks python3Packages.fabric (an azure-cli dep)
+    # broken. Drop this input once azure-cli evaluates on nixos-unstable again.
+    nixpkgs-azure-cli.url = "github:nixos/nixpkgs/55bfb4d7437bd4e09ab7cba58a43bd68eb310044";
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -169,6 +173,7 @@
         specialArgs = {
           inherit hyprland self;
           hostUser = hostData.user;
+          azureCliPackage = inputs.nixpkgs-azure-cli.legacyPackages.x86_64-linux.azure-cli;
         };
       };
   in {

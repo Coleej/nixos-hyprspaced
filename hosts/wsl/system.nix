@@ -1,4 +1,8 @@
-{pkgs, ...}: {
+{
+  pkgs,
+  azureCliPackage,
+  ...
+}: {
   # NixOS-WSL host. The nixos-wsl module (added in flake.nix) supplies the
   # kernel, bootloader, and root filesystem — so there is deliberately no
   # hardware-configuration.nix, no boot loader, and no boot.kernelPackages here.
@@ -43,7 +47,8 @@
   environment.systemPackages = with pkgs; [
     gcc
 
-    azure-cli
+    # From the pinned nixpkgs-azure-cli flake input (see flake.nix).
+    azureCliPackage
 
     # nbconvert's LaTeX exporter shells out to pandoc for markdown -> LaTeX
     # cell conversion (not just the xelatex backend below).

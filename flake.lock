@@ -640,6 +640,22 @@
         "type": "github"
       }
     },
+    "nixpkgs-azure-cli": {
+      "locked": {
+        "lastModified": 1791956154,
+        "narHash": "sha256-jBYGPi4udQ9uo4KQp9m2J0546nJVQitG15gvZSaVVAs=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "55bfb4d7437bd4e09ab7cba58a43bd68eb310044",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "55bfb4d7437bd4e09ab7cba58a43bd68eb310044",
+        "type": "github"
+      }
+    },
     "nixpkgs_2": {
       "locked": {
         "lastModified": 1792773339,
@@ -815,6 +831,7 @@
         "hyprland": "hyprland",
         "nixos-wsl": "nixos-wsl",
         "nixpkgs": "nixpkgs_2",
+        "nixpkgs-azure-cli": "nixpkgs-azure-cli",
         "opencode-v2": "opencode-v2",
         "qmd": "qmd",
         "sops-nix": "sops-nix"
