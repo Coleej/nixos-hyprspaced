@@ -91,6 +91,9 @@ hyprspace/
 │   ├── hyprland/               # brightness.sh, show-keybindings.sh
 │   ├── waybar/                 # waybar-dunst.sh, waybar-mpris.sh, waybar-public-ip.sh
 │   └── rofi-brightness.sh
+├── docs/
+│   ├── firefox-dms-theme-repair.md  # Manual runbook: Firefox stopped following DMS light/dark
+│   └── dev/dms-theme-sync.md        # Full DMS theme-sync investigation, plan, test harness
 ├── secrets/secrets.yaml       # sops-encrypted secrets (edit with `sops secrets/secrets.yaml`)
 ├── .sops.yaml                 # age recipient key used to encrypt secrets/secrets.yaml
 ├── wallpapers/default.jpg     # Placeholder — replace with your wallpaper
@@ -296,6 +299,9 @@ managed by the flake, and DMS settings in particular are per-machine:
 
 ### Firefox profile gotchas
 
+- **Firefox stopped following DMS after a rebuild or on a fresh host?** The profile is
+  machine-local state that Nix cannot manage; follow the ordered manual repair runbook at
+  `docs/firefox-dms-theme-repair.md`. Do not improvise profile surgery outside its list.
 - **`extensions.webextensions.uuids` is load-bearing.** Each extension's data lives in
   `storage/default/moz-extension+++<uuid>` and that pref is the only pointer to it. If it is
   ever lost, Firefox assigns fresh uuids, orphans every storage directory, and **all

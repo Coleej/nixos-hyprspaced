@@ -3,7 +3,8 @@
 Dev notes and implementation plan for making Firefox, Evolution and Neovim follow the
 DankMaterialShell (DMS) light/dark switch. Written so a new session can pick up without
 re-deriving anything. The user-facing runbook is the "DMS application theming" section of
-`AGENTS.md`; this file holds the history, the mistakes, the investigation, and the plan.
+`AGENTS.md`, and the manual Firefox repair procedure is `docs/firefox-dms-theme-repair.md`;
+this file holds the history, the mistakes, the investigation, and the plan.
 
 - **Part 1 — Where things stand** (status, how DMS drives theming, per-app history)
 - **Part 2 — Firefox investigation, 2026-10-19** (root cause found and fixed on x1)
