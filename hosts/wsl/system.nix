@@ -30,6 +30,20 @@
 
   networking.hostName = "wsl";
 
+  # Company P: drive (\\10.10.10.2\P). WSL only automounts local drives, so
+  # mount the Windows mapping via drvfs. Auth comes from the Windows session
+  # (saved with `cmdkey` on the Windows side) — no credentials live here.
+  # nofail: don't block boot when off the office network.
+  fileSystems."/mnt/p" = {
+    device = "P:";
+    fsType = "drvfs";
+    options = [
+      "uid=1000"
+      "gid=100"
+      "nofail"
+    ];
+  };
+
   services.tailscale.enable = true;
 
   # cody is created by wsl.defaultUser; just set the login shell and grant sudo.
