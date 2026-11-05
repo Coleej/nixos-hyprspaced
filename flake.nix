@@ -45,25 +45,13 @@
     # hand-pinned hash. Following is therefore *possible* now, but is untested
     # against its python/uv2nix pins, so this stays as-is until someone tries it.
     hermes-agent.url = "github:NousResearch/hermes-agent";
-    # opencode v2, packaged from official prebuilt binaries by
-    # github:Coleej/opencode-v2. Also deliberately not following nixpkgs: the
-    # flake pins its own, and modules/home/opencode.nix uses its
-    # `packages.<system>.opencode` output, which is built with that pin.
-    #
-    # The rev is pinned in the URL because the repo has no tags yet. Drop the
-    # `?rev=` once a release is tagged. Bumps arrive as PRs from the flake's own
-    # update workflow, which is the intended point to move this forward and
-    # re-run scripts/opencode-v2-migrate.py.
-    opencode-v2 = {
-      url = "git+ssh://git@github.com/Coleej/opencode-v2.git?rev=f146830ed52a4e79c9c8596a14097e3d09631823";
-    };
   };
 
   # `inputs@` binds the whole input set alongside the individual names, so
-  # inputs that are not valid Nix identifiers (opencode-v2) can still be passed
-  # down. Do NOT reach for `self.inputs` inside a module instead: self refers to
-  # these very outputs, so it re-enters evaluation and nix reports infinite
-  # recursion.
+  # inputs that are not valid Nix identifiers (nixpkgs-azure-cli) can still be
+  # passed down. Do NOT reach for `self.inputs` inside a module instead: self
+  # refers to these very outputs, so it re-enters evaluation and nix reports
+  # infinite recursion.
   outputs = inputs @ {
     self,
     nixpkgs,
@@ -141,27 +129,12 @@
                     (hostData.homeModule or ./home.nix)
                     sops-nix.homeManagerModules.default
                     qmd.homeModules.default
-                    # opencode v2's HM module. Imported HERE rather than from
-                    # modules/home/opencode.nix because a module's own `imports`
-                    # list is resolved during module collection, before
-                    # extraSpecialArgs or _module.args exist -- referencing
-                    # either from `imports` makes nixpkgs' module system report
-                    # "infinite recursion". Resolving it here, in flake scope,
-                    # is the supported way to thread a flake into HM.
-                    inputs.opencode-v2.homeManagerModules.opencode-v2
                   ]
                   ++ nixpkgs.lib.optional (!isWsl) hypr-binds.homeManagerModules.x86_64-linux.default
                   ++ nixpkgs.lib.optional (!isWsl) dms.homeModules.dank-material-shell
                   ++ nixpkgs.lib.optional (!isWsl) hermes-agent.homeManagerModules.default;
-                # Bound as `opencodeV2`, not `opencode-v2`: a module argument of
-                # that name would shadow the `opencode-v2.*` option namespace the
-                # imported module defines, so `opencode-v2.enable` would resolve
-                # against the flake instead of the option. _module.args (not
-                # extraSpecialArgs) because that is what the existing HM modules
-                # here already consume.
                 _module.args = {
                   inherit self;
-                  opencodeV2 = inputs.opencode-v2;
                   hostName = hostName;
                   hostUser = hostData.user;
                   claudeCodePackage = claude-code-nix.packages.x86_64-linux.claude-code;
