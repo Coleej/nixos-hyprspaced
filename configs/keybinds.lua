@@ -15,7 +15,7 @@ hl.bind(mod .. " + RETURN", hl.dsp.exec_cmd(terminal))
 hl.bind(mod .. " + SHIFT + RETURN", hl.dsp.exec_cmd(browser))
 
 -- Window management
-hl.bind(mod .. " + Q", hl.dsp.window.kill())
+hl.bind(mod .. " + Q", hl.dsp.window.close())
 hl.bind(mod .. " + M", hl.dsp.exit())
 hl.bind(mod .. " + V", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mod .. " + P", hl.dsp.window.pseudo())

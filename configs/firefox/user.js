@@ -18,6 +18,12 @@ user_pref("userChrome.theme-material", true);
 // Themes; any other theme (including a Firefox Color theme) pins
 // prefers-color-scheme and ignores the desktop. See docs/dev/dms-theme-sync.md.
 
+// Neutralize Ctrl+Q. Firefox's in-app quit accelerator closes every window at
+// once, and sits right next to the per-window close key (Ctrl+Shift+W). With
+// this set, Ctrl+Q does nothing in Firefox; close a single window with
+// SUPER+Q (Hyprland window.close) or Ctrl+Shift+W, and quit-all via the menu.
+user_pref("browser.quitShortcut.disabled", true);
+
 // NOTE: extensions.webextensions.uuids is deliberately NOT in this file.
 //
 // It maps each extension ID to the UUID that names its storage directory
