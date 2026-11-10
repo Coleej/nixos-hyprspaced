@@ -6,7 +6,13 @@ Flake-based NixOS configuration with Hyprland (Wayland compositor), Home Manager
 secrets. Four hosts are defined in `flake.nix`'s `hosts` attrset: `x1`, `thinkpad`, and
 `amd-workstation` (Hyprland desktops) and `wsl` (headless NixOS-WSL, terminal-only) — more can be
 added the same way. **`thinkpad` is decommissioned for now**: its config is kept and still builds,
-but the machine isn't in use — `x1` is the active laptop. Use `x1` in examples and when testing.
+but the machine isn't in use.
+
+> **⚠️ Always build the host you are physically on.** The `--flake .#<host>` fragment must be the
+> current machine's hostname (`$(hostname)`), never a hardcoded name. Building another host's config
+> on this machine applies the wrong `hardware-configuration.nix` and can break the running system —
+> running `sudo nixos-rebuild switch --flake .#x1` on `amd-workstation` has crashed it. Derive the
+> host with `$(hostname)` before every build/switch (see **Build / Eval Commands**).
 
 The desktop shell is switchable via the `hyprspace.shell` enum (`"waybar"` | `"dankshell"`), set in
 `modules/shared/default.nix`. DankMaterialShell (DMS) replaces waybar, wofi, dunst, hyprpaper,
@@ -105,28 +111,38 @@ hyprspace/
 
 ## Build / Eval Commands
 
+> **⚠️ Derive the host, never hardcode it.** The flake builds one config per machine, and the
+> `--flake .#<host>` fragment must match *this* machine's hostname, or you apply another host's
+> hardware configuration to the running system. Always set it first:
+>
+> ```bash
+> HOST="$(hostname)"   # e.g. amd-workstation, x1, wsl
+> ```
+>
+> Then reference `.#$HOST` in every command below.
+
 ### Evaluate the full configuration
 ```bash
 # System config
-nix eval .#nixosConfigurations.x1.config.system.build.toplevel --json
+nix eval .#nixosConfigurations.$HOST.config.system.build.toplevel --json
 
 # Home Manager user config
-nix eval .#nixosConfigurations.x1.config.home-manager.users.cody --json
+nix eval .#nixosConfigurations.$HOST.config.home-manager.users.cody --json
 ```
 
 ### Build and apply
 ```bash
 # Dry-run / type-check
-sudo nixos-rebuild dry-activate --flake .#x1        # or .#amd-workstation
+sudo nixos-rebuild dry-activate --flake .#$HOST
 
 # Apply (system + Home Manager - use this!)
-sudo nixos-rebuild switch --flake .#x1
+sudo nixos-rebuild switch --flake .#$HOST
 
 # Build only (no switch)
-nixos-rebuild build --flake .#x1
+nixos-rebuild build --flake .#$HOST
 
 # Home Manager only (faster iteration, no system rebuild)
-home-manager switch --flake .#x1
+home-manager switch --flake .#$HOST
 ```
 
 ### Formatting / Linting
@@ -409,7 +425,7 @@ shell switch**); master stays on the waybar stack until merged.
 ## Workflow Tips
 
 - **Pre-commit hook**: Installed via `.githooks/pre-commit`. Run `git config core.hooksPath .githooks` on new clones to enable it. Auto-formats staged `.nix` files with alejandra before each commit.
-- **Debugging**: Use `nix eval .#nixosConfigurations.x1.config.hyprspace.hyprland.enable`
+- **Debugging**: Use `nix eval .#nixosConfigurations.$(hostname).config.hyprspace.hyprland.enable`
 - **flake.lock**: Commit it for reproducible builds. Update with `nix flake update`
 - **Secrets**: Edit `secrets/secrets.yaml` with `sops secrets/secrets.yaml` — never hand-edit the
   encrypted file directly.
