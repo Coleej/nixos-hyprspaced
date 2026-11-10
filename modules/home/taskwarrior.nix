@@ -12,7 +12,15 @@
   # it is deliberately kept out of the Home Manager-managed config below.
   programs.taskwarrior = {
     enable = true;
-    package = pkgs.taskwarrior3;
+    # nixpkgs' taskwarrior3 (3.5.0) currently fails to link: its Rust
+    # libtaskchampion needs SQLite but the package's CMake link line omits
+    # -lsqlite3. Work around it until upstream fixes the package.
+    package = pkgs.taskwarrior3.overrideAttrs (old: {
+      buildInputs = old.buildInputs ++ [ pkgs.sqlite.dev pkgs.sqlite.out ];
+      cmakeFlags = old.cmakeFlags ++ [
+        (pkgs.lib.cmakeFeature "CMAKE_EXE_LINKER_FLAGS" "-lsqlite3")
+      ];
+    });
     dataLocation = "${config.xdg.configHome}/task";
     # Shipped as a store path, so it is read at runtime with no extra install.
     # See configs/taskwarrior/adaptive.theme for why the stock palette is not
