@@ -36,6 +36,13 @@
   # legacy path before each invocation, which also survives cookie re-imports.
   # Only created when the XDG profile exists, so the link never dangles and a
   # real legacy ~/.mozilla/firefox (older Firefox layout) is never shadowed.
+  #
+  # This is only a fallback: modules/home/dankshell.nix creates the same link at
+  # activation so it exists before Firefox first starts. Creating it later is
+  # not harmless — Firefox derives its single-instance D-Bus name from the
+  # resolved profile path, so a root that appears while Firefox is running
+  # makes every later launch report "already running, but is not responding"
+  # instead of opening a new window.
   opentracker = pkgs.writeShellScriptBin "opentracker" ''
     if [ -d "$HOME/.config/mozilla/firefox" ] && [ ! -e "$HOME/.mozilla/firefox" ] && [ ! -L "$HOME/.mozilla/firefox" ]; then
       mkdir -p "$HOME/.mozilla"

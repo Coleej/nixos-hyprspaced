@@ -40,6 +40,27 @@ in {
       pkgs.dux-gop
     ];
 
+    # Firefox profile root. Firefox resolves its default profile through the
+    # legacy root ~/.mozilla/firefox whenever that path exists, and through the
+    # XDG root ~/.config/mozilla/firefox otherwise (Firefox 158+ layout). The
+    # single-instance D-Bus name is derived from the resolved profile path
+    # (org.mozilla.firefox.<base64 of the path>), so a root that appears *while*
+    # Firefox is running changes the name every later launch asks for: nobody
+    # owns it, the profile lock is still held, and Firefox answers with
+    # "already running, but is not responding" instead of opening a new window
+    # (SUPER+SHIFT+RETURN appeared to stop working this way — the opentracker
+    # shim in modules/home/usage-tracker.nix used to create that link on
+    # demand, which is exactly that flip). Create the link here, before any
+    # Firefox launch, so the resolved path never changes. A real legacy
+    # profile tree is left untouched; an empty XDG root is created so the link
+    # can never dangle (Firefox refuses to mkdir through it).
+    home.activation.ensureFirefoxProfileRoot = lib.hm.dag.entryAfter ["linkGeneration"] ''
+      if [ ! -e "$HOME/.mozilla/firefox" ] && [ ! -L "$HOME/.mozilla/firefox" ]; then
+        mkdir -p "$HOME/.config/mozilla/firefox" "$HOME/.mozilla"
+        ln -sfn "$HOME/.config/mozilla/firefox" "$HOME/.mozilla/firefox"
+      fi
+    '';
+
     # Firefox / Material Fox. DMS regenerates
     # ~/.config/DankMaterialShell/firefox.css on every theme switch; that file
     # carries a light block plus a @media (prefers-color-scheme: dark) block,

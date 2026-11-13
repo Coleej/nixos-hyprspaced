@@ -341,6 +341,17 @@ managed by the flake, and DMS settings in particular are per-machine:
   themes in about:addons → Themes. The manual light/dark/device control there writes
   `ui.systemUsesDarkTheme` (note: `widget.*` and `extensions.systemTheme.update.enabled`
   are dead pref names — don't use them). Full story: `docs/dev/dms-theme-sync.md`.
+- **A second launch shows "Firefox is already running, but is not responding"** instead of a new
+  window (SUPER+SHIFT+RETURN and the launcher both look dead while Firefox works fine)? Firefox
+  resolves its default profile root to `~/.mozilla/firefox` when that path exists and to
+  `~/.config/mozilla/firefox` otherwise, and its single-instance D-Bus name is
+  `org.mozilla.firefox.<base64 of the resolved profile path>`. Creating the legacy link *while*
+  Firefox is running therefore changes the name new launches ask for, so they find no instance,
+  see the profile lock still held, and show that dialog. `modules/home/dankshell.nix`
+  (`ensureFirefoxProfileRoot`) now creates `~/.mozilla/firefox -> ~/.config/mozilla/firefox` at
+  activation so the path is fixed before the first launch; the opentracker wrapper keeps the same
+  link as an on-demand fallback. If it ever flips anyway, a single Firefox restart re-registers
+  the name and fixes the session (nothing else — profile data, tabs and extension storage — moves).
 - **Home Manager activation has a minimal PATH** — no `awk`, `grep` or `sed`. Activation
   scripts here must use bash builtins plus coreutils, and must escape `${...}` as `''${...}`
   to survive Nix interpolation inside indented strings.
