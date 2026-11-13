@@ -15,7 +15,7 @@
   #
   # opentracker CLI — Go, MIT, tagged releases, modular providers (OpenCode Go /
   # Zen / Codex / Claude). Build + hashes verified in docs/dev/opentracker.md.
-  opentracker = pkgs.buildGoModule rec {
+  opentrackerCli = pkgs.buildGoModule rec {
     pname = "opentracker";
     version = "1.5.1";
     src = pkgs.fetchFromGitHub {
@@ -27,6 +27,22 @@
     vendorHash = "sha256-h2KZAB3pYdJAPotdj7YxF9P39EEk5OyCef2Esq2SWBA=";
     ldflags = ["-s" "-w" "-X" "main.version=${version}"];
   };
+
+  # opentracker imports the OpenCode console cookie through kooky v0.2.9, whose
+  # Linux Firefox finder only scans ~/snap/firefox/common/.mozilla/firefox,
+  # ~/.mozilla/firefox and ~/.mozilla/firefox-esr. Firefox 158+ keeps profiles
+  # under ~/.config/mozilla/firefox, so the import fails with "no OpenCode
+  # session cookies found in any browser". Expose the XDG profile root at the
+  # legacy path before each invocation, which also survives cookie re-imports.
+  # Only created when the XDG profile exists, so the link never dangles and a
+  # real legacy ~/.mozilla/firefox (older Firefox layout) is never shadowed.
+  opentracker = pkgs.writeShellScriptBin "opentracker" ''
+    if [ -d "$HOME/.config/mozilla/firefox" ] && [ ! -e "$HOME/.mozilla/firefox" ] && [ ! -L "$HOME/.mozilla/firefox" ]; then
+      mkdir -p "$HOME/.mozilla"
+      ln -s "$HOME/.config/mozilla/firefox" "$HOME/.mozilla/firefox"
+    fi
+    exec ${opentrackerCli}/bin/opentracker "$@"
+  '';
 
   # One entry per backend. `packages` -> home.packages; `plugins` ->
   # programs.dank-material-shell.plugins (declared with only `src`, so

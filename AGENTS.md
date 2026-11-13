@@ -362,6 +362,29 @@ The older `opencodeGoUsage` plugin (Go-only, manually cloned into `~/.config/dms
 superseded by opentracker's Go provider; leave it installed but disable it in the GUI if you want
 only the new widget.
 
+Gotchas, discovered on `x1` (2026-11-13):
+
+- **The login is invisible under DMS's default Plugins filter.** Nix installs the plugin
+  without an `enabled` entry in `plugin_settings.json`, and the installed-plugins page caches
+  `pluginViewFilter: "enabled"`, so a disabled plugin is filtered out and can't be toggled on.
+  Set the filter to **All** first (or enable via `plugin_settings.json` + `dms ipc call
+  plugin-scan rescan openTrackerBar`).
+- **Enabling the plugin does not put a widget on a bar.** The bar keeps its own widget id list;
+  a stale `opencodeGoUsage` entry renders nothing once that plugin is disabled. Replace it with
+  `openTrackerBar` in Settings → Dank Bar → Widgets.
+- **`opentracker login opencode` needs a legacy cookie path.** Its kooky v0.2.9 Firefox finder
+  only scans `~/.mozilla/firefox` (and snap/esr variants); Firefox 158+ uses
+  `~/.config/mozilla/firefox`. The `opentracker` in `home.packages` is therefore a
+  `writeShellScriptBin` wrapper (`modules/home/usage-tracker.nix`) that creates
+  `~/.mozilla/firefox -> ~/.config/mozilla/firefox` on demand before exec'ing the real CLI, so
+  no per-host manual setup is needed. It only links when the XDG profile exists, so it can never
+  dangle or shadow a real legacy profile tree. If the import still fails, check the shim and
+  re-run with `-v`.
+- **The plugin card shows `repository does not exist`.** DMS's update checker opens the plugin
+  dir as a git repo; a Home Manager store symlink has no `.git`, so `go-git` returns
+  `ErrRepositoryNotExists`. Cosmetic: the plugin is loaded and updates come from the pinned
+  revision in the flake, not from DMS.
+
 ## Adding a New Host
 
 1. Add entry to `flake.nix` `hosts` attr:

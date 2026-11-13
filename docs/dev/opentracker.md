@@ -289,8 +289,13 @@ Reverse the three edits (§3.1–3.3) and run `home-manager switch --flake .#$HO
   that case: either keep the package in `home.packages` (current plan) or add an explicit
   `Environment=PATH=...` to `systemd.user.services.dms` via HM.
 - **OpenCode browser-cookie import** relies on kooky reading the Firefox cookie DB. The profile
-  here lives under `~/.config/mozilla/firefox` (see AGENTS.md); if the import cannot find it, the
-  fallback is upstream's documented retry instructions — not manual cookie copying.
+  here lives under `~/.config/mozilla/firefox` (see AGENTS.md); kooky v0.2.9 only scans
+  `~/.mozilla/firefox` (plus snap/esr variants), so the import failed with "no OpenCode session
+  cookies found in any browser" until `~/.mozilla/firefox` was symlinked to the XDG profile root.
+  The `opentracker` on PATH is now a `writeShellScriptBin` wrapper
+  (`modules/home/usage-tracker.nix`) that creates that shim on demand before exec'ing the real
+  CLI, so there is no per-host manual step. Run `opentracker login opencode -v` to confirm the
+  detected profile.
 - **Upstream churn.** OpenTrackerBar has no tags and no releases; the pinned commit is `main`
   HEAD as of 2026-11-11. Bump deliberately and re-check the manifest id stays `openTrackerBar`.
 - **Rate limits.** Codex fetches bypass opentracker's 90 s cache; the widget's default 2-minute
