@@ -4,6 +4,7 @@
     ./shell.nix
     ./desktop.nix
     ./dankshell.nix
+    ./usage-tracker.nix
     ./services.nix
     ./taskwarrior.nix
     ./secrets.nix

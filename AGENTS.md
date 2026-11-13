@@ -345,6 +345,23 @@ managed by the flake, and DMS settings in particular are per-machine:
   scripts here must use bash builtins plus coreutils, and must escape `${...}` as `''${...}`
   to survive Nix interpolation inside indented strings.
 
+## AI usage tracker (DMS widget + CLI)
+
+The desktop AI usage tracker (currently OpenCode Go) is managed by
+`modules/home/usage-tracker.nix` behind a single enum: `programs.usageTracker.backend`
+(`"opentracker"` default | `"none"`). The backend declares its CLI package(s) in `home.packages`
+and its DMS widget under `programs.dank-material-shell.plugins`; swapping to a different tracker
+later means adding an entry to the `backends` attrset and flipping the enum. The plugin is
+declared with only `src`, so `plugin_settings.json` (including the legacy `opencodeGoUsage`
+entry) stays unmanaged and enabling the widget remains a GUI step (Settings → Plugins).
+
+Authentication and enabling are **manual** and never Nix-managed: `opentracker login opencode`
+(browser cookie → gnome-keyring) from a terminal, then enable **OpenTrackerBar** in DMS and add
+it to a bar. See `docs/dev/opentracker.md` for the full plan, pinned revisions, and validation.
+The older `opencodeGoUsage` plugin (Go-only, manually cloned into `~/.config/dms/plugins/`) is
+superseded by opentracker's Go provider; leave it installed but disable it in the GUI if you want
+only the new widget.
+
 ## Adding a New Host
 
 1. Add entry to `flake.nix` `hosts` attr:
