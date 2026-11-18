@@ -21,6 +21,31 @@ in {
       XCURSOR_SIZE = "24";
     };
 
+    # TeamViewer's GUI is only a frontend: the daemon owns
+    # /var/run/teamviewerd.ipc, holds the device ID and handles the actual
+    # connections. `teamviewer --daemon start` just shells out to `systemctl
+    # start teamviewerd.service`, and nixpkgs ships no NixOS module for it, so
+    # without this unit the client always reports "the daemon is not running"
+    # (no ID, no incoming sessions). -f keeps it in the foreground so it fits
+    # Type=simple. The client package is installed per-user in
+    # modules/home/packages.nix (teamviewer-x11), on these same hosts only.
+    systemd.services.teamviewerd = {
+      description = "TeamViewer remote control daemon";
+      wantedBy = ["multi-user.target"];
+      after = ["network.target"];
+      serviceConfig = {
+        ExecStart = "${pkgs.teamviewer}/bin/teamviewerd -f";
+        # The daemon refuses to start if an ipc/pid file is left over from a
+        # crash or a manual run (it exits 1 immediately, which just looks like
+        # Restart=on-failure looping). Clear them first; only one instance of
+        # this unit can exist, so there is nothing live to clobber.
+        ExecStartPre = "${pkgs.coreutils}/bin/rm -f /run/teamviewerd.ipc /run/teamviewerd.pid";
+        Restart = "on-failure";
+        RestartSec = 5;
+      };
+      environment.HOME = "/root";
+    };
+
     # greetd is a minimal Wayland-capable display/login manager; tuigreet is a
     # TUI greeter that runs inside it. `--cmd start-hyprland` launches via the
     # wrapper script that sets up XDG_CURRENT_DESKTOP, portals, etc.

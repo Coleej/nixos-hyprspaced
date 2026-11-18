@@ -435,6 +435,37 @@ Gotchas, discovered on `x1` (2026-11-13):
 
 ## Known Issues
 
+### TeamViewer (Wayland plugin + missing daemon)
+
+Two separate things break TeamViewer on NixOS here, both in
+`modules/home/packages.nix` / `modules/shared/desktop.nix`:
+
+1. **The client crashes instantly on Wayland.** TeamViewer's .deb bundles only the `xcb` Qt
+   platform plugin, but `modules/shared/desktop.nix` exports `QT_QPA_PLATFORM=wayland`
+   session-wide. Qt therefore looks for a `wayland` plugin, finds none, and aborts in
+   `QGuiApplication::init` — a `SIGABRT` core dump with **no visible error**, because the
+   launcher spawns the GUI as a detached child (its stderr is thrown away). Diagnose with
+   `QT_DEBUG_PLUGINS=1` on the GUI binary; the message is
+   `Could not find the Qt platform plugin "wayland" in ""`. Fix: the `teamviewer-x11`
+   wrapper in `modules/home/packages.nix` forces `QT_QPA_PLATFORM=xcb` (XWayland) for this
+   app only. Two details matter: it must be a `symlinkJoin` (a bare `writeShellScriptBin`
+   drops the package's `share/`, which is what puts TeamViewer in the launcher), and the
+   `.desktop` file's `Exec=` points straight at `share/teamviewer/tv_bin/script/teamviewer`
+   inside the store — bypassing `bin/teamviewer` entirely — so it has to be rewritten to the
+   wrapper or clicking the launcher keeps crashing.
+2. **`teamviewerd` has no NixOS module.** The GUI is only a frontend; the daemon owns
+   `/run/teamviewerd.ipc`, holds the device ID and terminates connections. Without it the
+   client reports "the daemon is not running" and `teamviewer --info` shows a blank ID.
+   `teamviewer --daemon start` just shells out to `systemctl start teamviewerd.service`, so
+   `modules/shared/desktop.nix` defines that unit. The daemon **exits 1 immediately** if a
+   stale `ipc`/`pid` file is present (e.g. after a crash or a manual run), which looks like a
+   `Restart=` loop — hence the `ExecStartPre` that clears both.
+
+The client is per-user (`modules/home/packages.nix`), the daemon is system-wide and gated on
+`hyprspace.desktop.enable`, so headless hosts never pull TeamViewer in. DMS caches the
+application list: after this change, a launcher rescan (or re-login) may be needed before the
+icon reappears.
+
 ### NVIDIA Legacy GPU Support (e.g., ThinkPad GeForce 920M)
 
 The NVIDIA 5xx+ proprietary drivers dropped support for Maxwell (GM10x) GPUs. If a host has an
