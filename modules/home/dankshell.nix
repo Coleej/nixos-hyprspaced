@@ -23,9 +23,69 @@ in {
       enableDynamicTheming = true;
       enableAudioWavelength = true;
       enableCalendarEvents = false;
-      # settings/session intentionally unmanaged — tweak in the DMS GUI,
-      # codify here later if desired.
+      # settings/session otherwise unmanaged — tweak in the DMS GUI. The
+      # light/dark schedule is the exception and is pinned below.
     };
+
+    # Theme + gamma schedule. DMS has two independent automations (theme mode
+    # and gamma/night mode); both are pinned to Time with shared 18:00 -> 06:00
+    # hours, so one clock drives the light/dark switch and the warm tint.
+    #
+    # Location mode is deliberately not used: geoclue2 has no IP source in the
+    # NixOS module (the daemon logs "Unknown IP source method '(null)'"), and
+    # DMS's ip-api.com fallback answers 403 to Go's default User-Agent. The
+    # backend therefore fell back to (0, 0), where "sunset" is 11:36 CST -- the
+    # theme flipped to dark at noon. Time mode removes that dependency.
+    #
+    # The keys are merged into the existing session.json rather than set via
+    # programs.dank-material-shell.session, because that option makes the file
+    # a read-only store symlink and freezes wallpaper/dock/history edits. DMS
+    # keeps ownership; the schedule is simply re-asserted on each activation.
+    home.activation.manageDmsThemeSchedule = lib.hm.dag.entryAfter ["linkGeneration"] ''
+      session="$HOME/.local/state/dms/session.json"
+
+      # A fresh host has no session.json until DMS first saves one. Creating it
+      # with the current configVersion keeps DMS from running migrations over
+      # an empty file.
+      if [ ! -f "$session" ]; then
+        mkdir -p "$(dirname "$session")"
+        printf '{"configVersion": 7}\n' > "$session"
+      fi
+
+      tmp="$(mktemp "$session.XXXXXX")"
+      if ! ${pkgs.jq}/bin/jq '
+        .themeModeAutoEnabled = true
+        | .themeModeAutoMode = "time"
+        | .themeModeShareGammaSettings = true
+        | .themeModeStartHour = 18
+        | .themeModeStartMinute = 0
+        | .themeModeEndHour = 6
+        | .themeModeEndMinute = 0
+        | .nightModeEnabled = true
+        | .nightModeAutoEnabled = true
+        | .nightModeAutoMode = "time"
+        | .nightModeStartHour = 18
+        | .nightModeStartMinute = 0
+        | .nightModeEndHour = 6
+        | .nightModeEndMinute = 0
+        | .nightModeUseIPLocation = false
+      ' "$session" > "$tmp"; then
+        rm -f "$tmp"
+        echo "manageDmsThemeSchedule: could not parse $session" >&2
+        exit 1
+      fi
+
+      # Only replace the file when the merge actually changed something, so a
+      # rebuild that does not touch the schedule leaves DMS's file (and its
+      # inotify watch) alone. DMS does not notice an external atomic replace,
+      # so a changed schedule needs `systemctl --user restart dms` (or a
+      # re-login) before the new hours are evaluated.
+      if [ "$(cat "$tmp")" = "$(cat "$session")" ]; then
+        rm -f "$tmp"
+      else
+        mv "$tmp" "$session"
+      fi
+    '';
 
     # System monitoring widget backend (dux-gop, binary still named dgop), plus
     # adw-gtk3 for dynamic GTK3

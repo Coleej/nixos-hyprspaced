@@ -222,8 +222,17 @@ desktops; a host can override with `lib.mkForce`.
   when dankshell is active.
 - **HM side**: `modules/home/dankshell.nix` enables `programs.dank-material-shell` (dms flake HM
   module, imported in `flake.nix` for non-WSL hosts) when `osConfig.hyprspace.dankshell.enable`.
-  DMS settings/session are deliberately unmanaged — tweak in the GUI; codify into
-  `programs.dank-material-shell.settings` later if desired.
+  DMS settings/session are otherwise unmanaged — tweak in the GUI. The exception is the
+  light/dark schedule: the `manageDmsThemeSchedule` activation hook merges it into the existing
+  `~/.local/state/dms/session.json` on every activation (18:00 → 06:00, `themeModeAutoMode` and
+  `nightModeAutoMode` both `time`, `themeModeShareGammaSettings` true, so one clock drives the
+  theme and gamma/night mode). It is a merge, not `programs.dank-material-shell.session`, so DMS
+  keeps ownership of the file and wallpaper/dock/history stay editable. DMS does not notice an
+  external atomic replace, so after changing the hours run `systemctl --user restart dms` (or
+  re-login). Location mode is
+  deliberately avoided: the NixOS geoclue2 module emits no `[ip]` source and DMS's
+  `ip-api.com` fallback gets 403 from Go's default User-Agent, leaving the backend at (0, 0) —
+  whose "sunset" is 11:36 CST, so the theme flipped to dark at noon.
 - **Lua side**: `modules/home/desktop.nix` writes `~/.config/hypr/shell.lua` (just
   `return "<shell>"`). `keybinds.lua`, `autostart.lua`, and `hyprland.lua` branch on it
   (launcher/lock/media keys, dunst/hypridle/tray applets, DMS layer rule + `dms.*` requires).
