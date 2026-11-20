@@ -226,7 +226,13 @@ desktops; a host can override with `lib.mkForce`.
   light/dark schedule: the `manageDmsThemeSchedule` activation hook merges it into the existing
   `~/.local/state/dms/session.json` on every activation (18:00 → 06:00, `themeModeAutoMode` and
   `nightModeAutoMode` both `time`, `themeModeShareGammaSettings` true, so one clock drives the
-  theme and gamma/night mode). It is a merge, not `programs.dank-material-shell.session`, so DMS
+  theme and gamma/night mode). It also seeds `isLightMode` with the mode the schedule calls for
+  *at activation time*, so a boot during the day cannot inherit the previous night's dark mode.
+  That seed is load-bearing: DMS applies both the persisted `isLightMode` and the theme.auto
+  backend state at startup, asynchronously, and the backend only pushes on *change* — so a stale
+  persisted `false` applied after the backend's `true` leaves the desktop dark until the next
+  transition with no further state to correct it (`theme.auto.getState` will already say
+  `isLight: true`). It is a merge, not `programs.dank-material-shell.session`, so DMS
   keeps ownership of the file and wallpaper/dock/history stay editable. DMS does not notice an
   external atomic replace, so after changing the hours run `systemctl --user restart dms` (or
   re-login). Location mode is

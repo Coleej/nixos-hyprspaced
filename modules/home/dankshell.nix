@@ -41,6 +41,9 @@ in {
     # programs.dank-material-shell.session, because that option makes the file
     # a read-only store symlink and freezes wallpaper/dock/history edits. DMS
     # keeps ownership; the schedule is simply re-asserted on each activation.
+    # The hook also seeds the persisted light/dark mode to match the schedule
+    # at activation time, which is what makes a boot during the day start light
+    # instead of inheriting the previous night's mode (see below).
     home.activation.manageDmsThemeSchedule = lib.hm.dag.entryAfter ["linkGeneration"] ''
       session="$HOME/.local/state/dms/session.json"
 
@@ -52,9 +55,23 @@ in {
         printf '{"configVersion": 7}\n' > "$session"
       fi
 
+      # Seed the persisted mode with what the schedule says *now*. DMS applies
+      # SessionData.isLightMode at startup before/as well as the theme.auto
+      # backend state, and both land asynchronously -- whichever finishes last
+      # wins. Booting during the day off a session.json written last night
+      # (isLightMode=false) therefore came up dark and stayed dark until 18:00,
+      # because the backend only pushes on *change* and never re-sends the
+      # light state it already computed. Writing the current expected value
+      # makes the two agree, so the race cannot pick the wrong one.
+      case "$(date +%H)" in
+        0[6-9] | 1[0-7]) theme_light=true ;;
+        *) theme_light=false ;;
+      esac
+
       tmp="$(mktemp "$session.XXXXXX")"
-      if ! ${pkgs.jq}/bin/jq '
-        .themeModeAutoEnabled = true
+      if ! ${pkgs.jq}/bin/jq --argjson light "$theme_light" '
+        .isLightMode = $light
+        | .themeModeAutoEnabled = true
         | .themeModeAutoMode = "time"
         | .themeModeShareGammaSettings = true
         | .themeModeStartHour = 18
