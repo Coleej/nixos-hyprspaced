@@ -26,6 +26,7 @@ in {
     ./hyprland.nix
     ./waybar.nix
     ./services.nix
+    ./docker.nix
     ./system.nix
     ./user.nix
     ./gaming.nix

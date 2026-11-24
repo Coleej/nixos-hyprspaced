@@ -90,6 +90,18 @@ in {
     enable = true;
   };
 
+  # Rootless Docker listens on the per-user socket, but fish never sources
+  # /etc/profile, so virtualisation.docker.rootless.setSocketVariable's
+  # DOCKER_HOST export does not reach it. Rootful hosts (e.g. WSL) are left
+  # alone -- they use the default /run/docker.sock.
+  programs.fish.interactiveShellInit =
+    lib.mkIf (
+      (osConfig.hyprspace.docker.enable or false)
+      && (osConfig.hyprspace.docker.mode or "rootful") == "rootless"
+    ) ''
+      set -gx DOCKER_HOST "unix://$XDG_RUNTIME_DIR/docker.sock"
+    '';
+
   programs.wofi = {
     # DMS spotlight replaces wofi in the "dankshell" stack.
     enable = shellName != "dankshell";

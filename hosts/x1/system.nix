@@ -45,6 +45,10 @@
     sdk.enable = true;
   };
 
+  # Rootless by default (hyprspace.docker.mode). Add CLI extras such as
+  # lazydocker/dive to hyprspace.docker.extraPackages if wanted.
+  hyprspace.docker.enable = true;
+
   hyprspace.packages = {
     enable = true;
     base.enable = true;
