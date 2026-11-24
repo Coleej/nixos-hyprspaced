@@ -52,6 +52,14 @@ in {
     services.greetd = {
       enable = true;
       restart = true;
+      # tuigreet is a full-screen TUI on tty1, but tty1 is also the kernel
+      # console. Without this the greeter paints over whatever boot output is
+      # already on the VT, and any console message printed after greetd starts
+      # (e.g. nix-gc firing at boot via Persistent= on the timer) writes on top
+      # of the login screen. This flag makes systemd own tty1 for greetd:
+      # TTYVTDisallocate clears the VT first, and StandardError goes to the
+      # journal instead of the screen.
+      useTextGreeter = true;
       settings.default_session = {
         user = "greeter";
         command = "${pkgs.tuigreet}/bin/tuigreet --time --cmd start-hyprland";
